@@ -59,13 +59,13 @@ FORCE_RETRAIN_ES = False or FORCE_RETRAIN_ALL
 # Original Tetris DQN used "epochs" where an epoch was one piece placement + learning step.
 MAX_EPOCHS_OR_PIECES = 50000 # General guideline, can be more specific per agent
 PRINT_EVERY_EPOCHS = 100
-SCORE_TARGET = 5000 # Example target score for a full game (adjust as needed)
+SCORE_TARGET = 1000000 # Example target score for a full game (adjust as needed)
 
 # === DQN (adapted from original Tetris train.py and LunarLander) ===
 DQN_NUM_EPOCHS = 1000000 # Number of piece placements/learning updates
 DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
-DQN_TARGET_GAME_SCORE = 10000 # Target score for a full game
+DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
 
 # DQN Hyperparameters (some from original Tetris, some from LunarLander)
 DQN_BUFFER_SIZE = 30000
@@ -87,7 +87,7 @@ DQN_FC2_UNITS = 64
 GA_N_GENERATIONS = 200  # Or whatever you set
 GA_POPULATION_SIZE = 50
 GA_EVAL_GAMES_PER_INDIVIDUAL = 3
-GA_MAX_PIECES_PER_GA_EVAL_GAME = 500
+GA_MAX_PIECES_PER_GA_EVAL_GAME = 100000000000
 GA_SAVE_EVERY_N_GENERATIONS = 10 # How often to save best model during training
 
 GA_MUTATION_RATE = 0.1
@@ -99,31 +99,24 @@ GA_ELITISM_COUNT = 2
 GA_FC1_UNITS = 32 # Example, can be 64
 GA_FC2_UNITS = 32 # Example
 
-GA_MODEL_FILENAME = "ga_best_tetris.pth"
-GA_MODEL_PATH = os.path.join(MODEL_DIR, GA_MODEL_FILENAME)
-
-
 # === Evolutionäre Strategien (ES) ===
-ES_N_GENERATIONS = 300 # Example
+ES_N_GENERATIONS = 300 
 ES_POPULATION_SIZE = 50
 ES_SIGMA = 0.1
 ES_LEARNING_RATE = 0.005 # Might need tuning
 ES_EVAL_GAMES_PER_PARAM = 2
 ES_MAX_PIECES_PER_ES_EVAL_GAME = 500
 ES_PRINT_EVERY_GENS = 1
-ES_TARGET_GAME_SCORE = 4000 # Example
+ES_TARGET_GAME_SCORE = 1000000 
 
 ES_FC1_UNITS = 32 # Example
 ES_FC2_UNITS = 32 # Example
 
-ES_MODEL_FILENAME = "es_tetris.pth"
-ES_MODEL_PATH = os.path.join(MODEL_DIR, ES_MODEL_FILENAME)
-
 # === REINFORCE ===
 REINFORCE_TRAIN_GAMES = 5000 # Number of full games
-REINFORCE_MAX_PIECES_PER_GAME = 1000
+REINFORCE_MAX_PIECES_PER_GAME = 1000000000
 REINFORCE_PRINT_EVERY_GAMES = 10
-REINFORCE_TARGET_GAME_SCORE = 2000
+REINFORCE_TARGET_GAME_SCORE = 1000000
 
 REINFORCE_LEARNING_RATE = 1e-4
 REINFORCE_GAMMA = 0.99
@@ -133,9 +126,9 @@ REINFORCE_FC2_UNITS = 64
 
 # === A2C ===
 A2C_TRAIN_GAMES = 5000
-A2C_MAX_PIECES_PER_GAME = 1000
+A2C_MAX_PIECES_PER_GAME = 1000000000
 A2C_PRINT_EVERY_GAMES = 10
-A2C_TARGET_GAME_SCORE = 3000
+A2C_TARGET_GAME_SCORE = 1000000
 
 A2C_LEARNING_RATE = 7e-4
 A2C_GAMMA = 0.99
@@ -146,12 +139,12 @@ A2C_FC2_UNITS = 64
 # Actor head outputs 1 (score for state_after_action), Critic head outputs 1 (value for state_before_action)
 
 # === PPO ===
-PPO_TOTAL_PIECES = 200000 # Total piece placements
+PPO_TOTAL_PIECES = 10000000 # Total piece placements
 PPO_UPDATE_HORIZON = 1024 # Pieces collected before update
 PPO_EPOCHS_PER_UPDATE = 4 # SGD epochs over collected data
 PPO_BATCH_SIZE = 64
 PPO_PRINT_EVERY_N_UPDATES = 5
-PPO_TARGET_GAME_SCORE = 8000
+PPO_TARGET_GAME_SCORE = 2000000
 PPO_MAX_POTENTIAL_ACTIONS = 50
 
 PPO_ACTOR_LR = 3e-4
@@ -174,7 +167,7 @@ GIF_FPS = 15
 
 # --- Evaluation Configuration (for evaluate.py) ---
 NUM_EVAL_GAMES = 20 # Number of full games for final evaluation
-MAX_PIECES_PER_EVAL_GAME = 2000
+MAX_PIECES_PER_EVAL_GAME = 1000000000
 RENDER_MODE_EVAL = None # None for faster, "human" for viewing
 
 # --- Device Configuration ---

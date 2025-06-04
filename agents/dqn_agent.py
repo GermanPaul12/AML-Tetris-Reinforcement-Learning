@@ -218,9 +218,11 @@ class DQNAgent(BaseAgent):
                     self.hard_update(self.qnetwork_local, self.qnetwork_target)
         
         # Epsilon decay is based on "epochs" from original Tetris, which are piece placements/learning steps
-        self.current_epoch_for_decay +=1 # THIS IS THE KEY
+        old_epsilon = self.epsilon # For debugging
+        self.current_epoch_for_decay +=1
         if self.current_epoch_for_decay <= global_config.DQN_EPSILON_DECAY_EPOCHS:
             self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_decay_val)
+        print(f"[DQNAgent Debug] Epoch: {self.current_epoch_for_decay}, Old Epsilon: {old_epsilon:.4f}, New Epsilon: {self.epsilon:.4f}, Decay Active: {self.current_epoch_for_decay <= global_config.DQN_EPSILON_DECAY_EPOCHS}")
 
 
     def _learn_from_experiences(self, experiences, gamma):
