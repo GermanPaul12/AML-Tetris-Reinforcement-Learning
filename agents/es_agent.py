@@ -90,7 +90,7 @@ class ESAgent(BaseAgent): # ESAgent also acts as the controller
             eval_env = Tetris(width=eval_env_template.width,
                               height=eval_env_template.height,
                               block_size=eval_env_template.block_size)
-            current_board_features = eval_env.reset(seed=random.randint(0, 100000))
+            current_board_features = eval_env.reset()
             if DEVICE.type == 'cuda': current_board_features = current_board_features.cuda()
             
             game_score = 0

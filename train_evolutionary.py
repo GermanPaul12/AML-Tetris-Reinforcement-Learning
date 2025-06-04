@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 import config as tetris_config
+#import test_config as tetris_config
 from agents import GeneticAlgorithmController, ESAgent # Import controllers
 from src.tetris import Tetris # The game environment
 

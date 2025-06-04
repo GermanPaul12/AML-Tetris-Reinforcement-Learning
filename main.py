@@ -5,6 +5,7 @@ import os
 
 # Assuming config.py is in the same directory or Python path is set up
 import config as tetris_config
+#import test_config as tetris_config
 
 def get_operation_choice():
     print("\nWhat would you like to do?")

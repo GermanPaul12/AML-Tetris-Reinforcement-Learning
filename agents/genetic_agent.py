@@ -110,7 +110,7 @@ class GeneticAlgorithmController:
             
             # Game seed can be varied or fixed for fitness evaluation
             # Varying it makes fitness more robust
-            current_board_features = eval_env.reset(seed=random.randint(0, 100000))
+            current_board_features = eval_env.reset()
             if DEVICE.type == 'cuda': current_board_features = current_board_features.cuda()
             
             game_score = 0

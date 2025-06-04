@@ -285,12 +285,29 @@ class PPOAgent(BaseAgent):
         
         self.clear_memory()
 
-    def learn(self, current_board_features, action_tuple, reward, next_board_features_actual, done,
+    def learn(self, state_features, action_tuple, reward, next_state_features, done, # Renamed params
               game_instance_at_s=None, game_instance_at_s_prime=None, aux_info=None):
-        # select_action stored: S_t, all_S'_list, chosen_action_idx, log_prob_old, V(S_t)
-        # Here, we just store R_{t+1} and D_{t+1}
+        """
+        PPO stores experience. Learning happens in learn_from_memory().
+        `state_features`: S_t (board before action) - current_board_features from train.py
+        `aux_info`: Contains info from select_action like chosen_action_index, log_prob_old, etc.
+                     These are used by select_action to populate memory.
+        `reward`: R_{t+1}
+        `next_state_features`: S'_{actual} (board after action & new piece) - next_board_features_actual from train.py
+        `done`: game_over for S'_{actual}
+        """
+        # select_action (called before this in train.py) already stored:
+        # S_t (as state_features), 
+        # all_S'_list (derived from tetris_game_instance passed to select_action),
+        # chosen_action_idx, log_prob_old, V(S_t)
+        
+        # Here, we just store R_{t+1} and D_{t+1} (done status of S'_{actual})
         self.store_transition_result(reward, done)
-        # Training loop in train.py calls learn_from_memory() when horizon is full.
+        # The main training script (train.py) will check if len(memory) >= update_horizon
+        # and then call learn_from_memory().
+        # `state_features` and `next_state_features` are not directly used in *this specific learn method call*
+        # for PPO, as all necessary S_t info was captured by select_action.
+        # However, they are part of the BaseAgent interface.
 
     def clear_memory(self):
         self.memory_s_t_features = []

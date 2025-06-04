@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 import config as tetris_config
+#import test_config as tetris_config
 from agents import AGENT_REGISTRY
 # Specific agent imports to check instance types if needed for very specific logic
 from agents.dqn_agent import DQNAgent

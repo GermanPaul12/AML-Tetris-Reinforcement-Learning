@@ -132,57 +132,43 @@ class A2CAgent(BaseAgent):
         }
         return chosen_action_tuple, aux_info
 
-    def learn(self, current_board_features, action_tuple, reward, next_board_features_actual, done,
+    def learn(self, state_features, action_tuple, reward, next_state_features, done, # Renamed params
               game_instance_at_s=None, game_instance_at_s_prime=None, aux_info=None):
         """
         A2C learns on-policy from each step.
-        `current_board_features`: S_t (board before current piece placement)
+        `state_features`: S_t (board before current piece placement) - THIS IS current_board_features from train.py
         `aux_info['log_prob']`: log_prob of choosing action leading to S_t'
         `aux_info['entropy']`: entropy of policy at S_t
         `aux_info['value_of_current_board']`: V(S_t) estimated by critic
         `reward`: R_{t+1} (reward for placing the piece)
-        `next_board_features_actual`: S_{t+1} (board after new piece appears)
+        `next_state_features`: S_{t+1} (board after new piece appears) - THIS IS next_board_features_actual from train.py
         `done`: game over flag for S_{t+1}
         """
         log_prob = aux_info['log_prob']
         entropy = aux_info['entropy']
         value_s_current = aux_info['value_of_current_board'] # This is V(S_t)
 
-        # Convert to tensors
         reward_tensor = torch.tensor([reward], dtype=torch.float32).to(DEVICE)
         done_tensor = torch.tensor([done], dtype=torch.float32).to(DEVICE)
         
-        # Calculate V(S_{t+1})
-        value_s_next_actual = torch.tensor([0.0], dtype=torch.float32).to(DEVICE) # Default if done
+        value_s_next_actual = torch.tensor([0.0], dtype=torch.float32).to(DEVICE)
         if not done:
-            with torch.no_grad(): # Target value should not have gradient
-                value_s_next_actual = self.network(next_board_features_actual.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
+            with torch.no_grad():
+                # next_state_features is s_prime_actual_features from the training loop
+                value_s_next_actual = self.network(next_state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
         
-        # TD Target for critic: R + gamma * V(S_{t+1})
         td_target = reward_tensor + self.gamma * value_s_next_actual * (1 - done_tensor)
-        
-        # Advantage: A = td_target - V(S_t)
-        advantage = (td_target - value_s_current).detach() # Detach advantage for actor loss
-
-        # Actor Loss (Policy Gradient Loss)
+        advantage = (td_target - value_s_current).detach()
         actor_loss = -(log_prob * advantage)
         
-        # Critic Loss (Value Loss) - MSE
-        # value_s_current was calculated during select_action. We need to ensure gradients
-        # flow for it if it's recalculated or if the network call in select_action was part of graph.
-        # For simplicity, let's re-evaluate V(S_current) here for the loss calculation to ensure grad.
-        re_evaluated_value_s_current = self.network(current_board_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
+        # state_features is s_t_features from the training loop
+        re_evaluated_value_s_current = self.network(state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
         critic_loss = F.mse_loss(re_evaluated_value_s_current, td_target.detach())
-        # Alternatively, if value_s_current from aux_info has grad_fn:
-        # critic_loss = F.mse_loss(value_s_current, td_target.detach())
 
-
-        # Total Loss
         total_loss = actor_loss + self.value_loss_coeff * critic_loss - self.entropy_coeff * entropy
         
         self.optimizer.zero_grad()
         total_loss.backward()
-        # Optional: torch.nn.utils.clip_grad_norm_(self.network.parameters(), 0.5)
         self.optimizer.step()
 
     def save(self, filepath=None):
