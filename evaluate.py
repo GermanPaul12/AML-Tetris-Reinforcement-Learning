@@ -19,7 +19,7 @@ def setup_seeds(seed):
     print(f"Evaluation seeds set to: {seed}")
 
 def run_evaluation_game(env: Tetris, agent, game_seed):
-    current_board_features = env.reset(seed=game_seed)
+    current_board_features = env.reset()
     if tetris_config.DEVICE.type == 'cuda':
         current_board_features = current_board_features.cuda()
     

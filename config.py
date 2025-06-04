@@ -57,6 +57,7 @@ FORCE_RETRAIN_ES = False or FORCE_RETRAIN_ALL
 # General training parameters (can be overridden per agent)
 # Tetris is episodic based on piece placement, not full games for some metrics.
 # Original Tetris DQN used "epochs" where an epoch was one piece placement + learning step.
+MAX_EPOCHS = 5000
 MAX_EPOCHS_OR_PIECES = 50000 # General guideline, can be more specific per agent
 PRINT_EVERY_EPOCHS = 100
 SCORE_TARGET = 1000000 # Example target score for a full game (adjust as needed)
@@ -67,7 +68,7 @@ DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
 DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
 
-# DQN Hyperparameters (some from original Tetris, some from LunarLander)
+# DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
 DQN_BATCH_SIZE = 512
 DQN_GAMMA = 0.99
@@ -76,17 +77,17 @@ DQN_UPDATE_EVERY = 1            # For Tetris, learn after every piece placement
 DQN_TARGET_UPDATE_EVERY = 1000  # How many learning steps before target net update
 DQN_EPSILON_START = 1.0
 DQN_EPSILON_MIN = 1e-3
-DQN_EPSILON_DECAY_EPOCHS = 2000 # Epochs over which epsilon decays
+DQN_EPSILON_DECAY_EPOCHS = 5000 # Epochs over which epsilon decays
 
 # DQN Network Architecture (like original Tetris DeepQNetwork)
-DQN_FC1_UNITS = 64
-DQN_FC2_UNITS = 64
+DQN_FC1_UNITS = 32
+DQN_FC2_UNITS = 32
 # Output is 1, as it predicts Q-value for a *given* state (which is state after action)
 
 # === Genetic Algorithm (GA) ===
 GA_N_GENERATIONS = 200  # Or whatever you set
 GA_POPULATION_SIZE = 50
-GA_EVAL_GAMES_PER_INDIVIDUAL = 3
+GA_EVAL_GAMES_PER_INDIVIDUAL = 1
 GA_MAX_PIECES_PER_GA_EVAL_GAME = 100000000000
 GA_SAVE_EVERY_N_GENERATIONS = 10 # How often to save best model during training
 
@@ -96,21 +97,21 @@ GA_CROSSOVER_RATE = 0.7
 GA_TOURNAMENT_SIZE = 5
 GA_ELITISM_COUNT = 2
 
-GA_FC1_UNITS = 32 # Example, can be 64
-GA_FC2_UNITS = 32 # Example
+GA_FC1_UNITS = 32 
+GA_FC2_UNITS = 32
 
 # === Evolutionäre Strategien (ES) ===
 ES_N_GENERATIONS = 300 
 ES_POPULATION_SIZE = 50
 ES_SIGMA = 0.1
 ES_LEARNING_RATE = 0.005 # Might need tuning
-ES_EVAL_GAMES_PER_PARAM = 2
-ES_MAX_PIECES_PER_ES_EVAL_GAME = 500
+ES_EVAL_GAMES_PER_PARAM = 1
+ES_MAX_PIECES_PER_ES_EVAL_GAME = 10000000
 ES_PRINT_EVERY_GENS = 1
 ES_TARGET_GAME_SCORE = 1000000 
 
-ES_FC1_UNITS = 32 # Example
-ES_FC2_UNITS = 32 # Example
+ES_FC1_UNITS = 32 
+ES_FC2_UNITS = 32 
 
 # === REINFORCE ===
 REINFORCE_TRAIN_GAMES = 5000 # Number of full games
@@ -120,8 +121,8 @@ REINFORCE_TARGET_GAME_SCORE = 1000000
 
 REINFORCE_LEARNING_RATE = 1e-4
 REINFORCE_GAMMA = 0.99
-REINFORCE_FC1_UNITS = 64
-REINFORCE_FC2_UNITS = 64
+REINFORCE_FC1_UNITS = 32
+REINFORCE_FC2_UNITS = 32
 # Policy network output 1 (score for a given state_after_action)
 
 # === A2C ===
@@ -134,8 +135,8 @@ A2C_LEARNING_RATE = 7e-4
 A2C_GAMMA = 0.99
 A2C_ENTROPY_COEFF = 0.01
 A2C_VALUE_LOSS_COEFF = 0.5
-A2C_FC1_UNITS = 64  # Shared layers
-A2C_FC2_UNITS = 64
+A2C_FC1_UNITS = 32  # Shared layers
+A2C_FC2_UNITS = 32
 # Actor head outputs 1 (score for state_after_action), Critic head outputs 1 (value for state_before_action)
 
 # === PPO ===
@@ -154,16 +155,16 @@ PPO_GAE_LAMBDA = 0.95
 PPO_CLIP_EPSILON = 0.2
 PPO_ENTROPY_COEFF = 0.01
 PPO_VALUE_LOSS_COEFF = 0.5
-PPO_ACTOR_FC1 = 64 # Actor net: state_after_action -> score
-PPO_ACTOR_FC2 = 64
-PPO_CRITIC_FC1 = 64 # Critic net: state_before_action -> value
-PPO_CRITIC_FC2 = 64
+PPO_ACTOR_FC1 = 32 # Actor net: state_after_action -> score
+PPO_ACTOR_FC2 = 32
+PPO_CRITIC_FC1 = 32 # Critic net: state_before_action -> value
+PPO_CRITIC_FC2 = 32
 
 
 # --- Test Configuration (for test.py) ---
-NUM_TEST_RUNS_GIF = 3 # Number of full games to record in one GIF
+NUM_TEST_RUNS_GIF = 1 # Number of full games to record in one GIF
 RENDER_MODE_TEST = "rgb_array" # For GIF: "rgb_array", for viewing: "human"
-GIF_FPS = 15
+GIF_FPS = 300
 
 # --- Evaluation Configuration (for evaluate.py) ---
 NUM_EVAL_GAMES = 20 # Number of full games for final evaluation
@@ -171,7 +172,7 @@ MAX_PIECES_PER_EVAL_GAME = 1000000000
 RENDER_MODE_EVAL = None # None for faster, "human" for viewing
 
 # --- Device Configuration ---
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def ensure_model_dir_exists():
     if not os.path.exists(MODEL_DIR):

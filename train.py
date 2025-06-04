@@ -2,34 +2,13 @@
 import argparse
 import os
 import random
-import copy # For deep copying game state
 
 import numpy as np
 import torch
-
-# Using the config name chosen by main.py or a default
-# This logic should ideally be in main.py and config passed down,
-# but for standalone train.py, we might need a way to switch.
-# For now, assuming main.py sets up which config module is imported as 'tetris_config'
-# If running train.py directly, it will use the default 'config.py'
-try:
-    if 'tetris_config_module_name' in os.environ:
-        config_module_name = os.environ['tetris_config_module_name']
-        if config_module_name.endswith(".py"):
-            config_module_name = config_module_name[:-3]
-        print(f"[train.py] Attempting to load config: {config_module_name}")
-        tetris_config = __import__(config_module_name)
-    else:
-        import config as tetris_config
-        print("[train.py] Loaded default config.py")
-except ImportError:
-    print("[train.py] Failed to load specified or default config. Exiting.")
-    exit()
-
+import config as tetris_config
 
 from agents import AGENT_REGISTRY
 from agents.dqn_agent import DQNAgent
-from agents.original_dqn_agent import OriginalDQNAgent
 from agents.reinforce_agent import REINFORCEAgent
 from agents.a2c_agent import A2CAgent
 from agents.ppo_agent import PPOAgent
@@ -74,7 +53,7 @@ def train():
     
     total_pieces_to_play = opt.num_total_pieces
     if total_pieces_to_play is None:
-        if opt.agent_type == "dqn" or opt.agent_type == "dqn_original":
+        if opt.agent_type == "dqn":
             total_pieces_to_play = tetris_config.DQN_NUM_EPOCHS # This is the "num_epochs" from original
         elif opt.agent_type == "ppo":
             total_pieces_to_play = tetris_config.PPO_TOTAL_PIECES
@@ -103,7 +82,7 @@ def train():
 
     last_s_prime_actual_features_for_ppo = None # For PPO when horizon ends mid-game
 
-    while pieces_played_count < total_pieces_to_play:
+    while games_played_count < tetris_config.MAX_EPOCHS:
         # 1. Agent selects action.
         # `s_t_board_features` is passed. Agent uses `env` (tetris_game_instance) to call `get_next_states()`.
         # `aux_info` should contain `s_prime_chosen_features` for DQN-like agents.
@@ -131,27 +110,7 @@ def train():
 
         # 4. Agent learns.
         game_instance_at_s_prime = None # For DQNAgent (new one) to call get_next_states() from S'_{actual}
-        if not game_over:
-            # OriginalDQNAgent does NOT use game_instance_at_s_prime in its learn()
-            # DQNAgent (new), A2C, PPO might use it for target value calculation.
-            if isinstance(agent, DQNAgent) or \
-               isinstance(agent, A2CAgent) or \
-               isinstance(agent, PPOAgent):
-                if not isinstance(agent, OriginalDQNAgent): # Exclude OriginalDQNAgent explicitly
-                    game_instance_at_s_prime = copy.deepcopy(env)
-
-        # For OriginalDQNAgent and DQNAgent, the `learn` method expects the "current state" for Q_expected
-        # to be s_prime_chosen_features (passed via aux_info), and "next state" for Q_target
-        # to be s_prime_actual_features.
-        # For other agents, s_t_board_features is the "current state" S_t.
-        
         current_state_for_learn = s_t_board_features # Default for PG, A2C, PPO critics
-        if isinstance(agent, OriginalDQNAgent) or isinstance(agent, DQNAgent):
-            # These agents' Q-learning update is based on Q(S'_chosen) vs R + gamma * max_a Q(S'_{actual}, a)
-            # Their learn methods are structured to use aux_info['s_prime_chosen_features'] internally
-            # and next_state_features (which is s_prime_actual_features).
-            # So, the first arg state_features (s_t_board_features) is context, not the Q-learning state.
-            pass # Their internal learn logic will use aux_info correctly.
 
         agent.learn(
             state_features=current_state_for_learn, # S_t for PG/A2C/PPO critic, context for DQN-likes
@@ -231,13 +190,4 @@ def train():
         agent.save(os.path.join(default_save_dir, f"{opt.agent_type}_tetris_final.pth"))
 
 if __name__ == "__main__":
-    # This helps select config if train.py is run directly for debugging
-    # Set environment variable before running:
-    # export TETRIS_CONFIG_MODULE=config_test_suite
-    # Or uncomment one of these lines in code:
-    # os.environ['tetris_config_module_name'] = 'config' # For normal config
-    # os.environ['tetris_config_module_name'] = 'config_test_suite' # For test config
-    
-    # The import at the top will handle loading based on this env var if set.
-    # If not set, it defaults to 'config'.
     train()

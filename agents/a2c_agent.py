@@ -4,10 +4,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
-import numpy as np
 import random
 import os
-import copy
 
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -146,24 +144,23 @@ class A2CAgent(BaseAgent):
         """
         log_prob = aux_info['log_prob']
         entropy = aux_info['entropy']
-        value_s_current = aux_info['value_of_current_board'] # This is V(S_t)
+        value_s_current = aux_info['value_of_current_board'] 
 
         reward_tensor = torch.tensor([reward], dtype=torch.float32).to(DEVICE)
         done_tensor = torch.tensor([done], dtype=torch.float32).to(DEVICE)
         
-        value_s_next_actual = torch.tensor([0.0], dtype=torch.float32).to(DEVICE)
+        v_s_prime_actual_online = torch.tensor([0.0], dtype=torch.float32).to(DEVICE)
         if not done:
             with torch.no_grad():
-                # next_state_features is s_prime_actual_features from the training loop
-                value_s_next_actual = self.network(next_state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
+                 v_s_prime_actual_online = self.network(next_state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
         
-        td_target = reward_tensor + self.gamma * value_s_next_actual * (1 - done_tensor)
-        advantage = (td_target - value_s_current).detach()
+        td_target_aggressive = reward_tensor + self.gamma * v_s_prime_actual_online * (1 - done_tensor)
+        
+        advantage = (td_target_aggressive - value_s_current).detach() 
         actor_loss = -(log_prob * advantage)
         
-        # state_features is s_t_features from the training loop
-        re_evaluated_value_s_current = self.network(state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
-        critic_loss = F.mse_loss(re_evaluated_value_s_current, td_target.detach())
+        current_value_re_eval = self.network(state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
+        critic_loss = F.mse_loss(current_value_re_eval, td_target_aggressive.detach()) # Target is detached
 
         total_loss = actor_loss + self.value_loss_coeff * critic_loss - self.entropy_coeff * entropy
         

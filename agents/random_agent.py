@@ -13,7 +13,7 @@ class RandomAgent(BaseAgent):
         random.seed(seed)
         print("RandomAgent for Tetris initialized.")
 
-    def select_action(self, state_features: torch.Tensor, tetris_game_instance):
+    def select_action(self, state_features: torch.Tensor, tetris_game_instance, epsilon_override=0.0):
         """
         Selects a random action from the possible next moves.
         """
