@@ -11,7 +11,3 @@ dependencies = [
     "pillow>=11.2.1",
     "torch>=2.7.0",
 ]
-
-[[tool.uv.index]]
-url = "https://artifactory.schaeffler.com/artifactory/api/pypi/pypi/simple"
-default = true

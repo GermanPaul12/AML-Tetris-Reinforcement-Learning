@@ -3,7 +3,7 @@
 """
 import argparse
 import torch
-import cv2
+# import cv2
 from src.tetris import Tetris
 
 
@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument("--height", type=int, default=20, help="The common height for all images")
     parser.add_argument("--block_size", type=int, default=30, help="Size of a block")
     parser.add_argument("--fps", type=int, default=300, help="frames per second")
-    parser.add_argument("--saved_path", type=str, default="trained_models")
+    parser.add_argument("--saved_path", type=str, default="models")
     parser.add_argument("--output", type=str, default="output.mp4")
 
     args = parser.parse_args()
@@ -36,8 +36,8 @@ def test(opt):
     env.reset()
     if torch.cuda.is_available():
         model.cuda()
-    out = cv2.VideoWriter(opt.output, cv2.VideoWriter_fourcc(*"MJPG"), opt.fps,
-                          (int(1.5*opt.width*opt.block_size), opt.height*opt.block_size))
+    # out = cv2.VideoWriter(opt.output, cv2.VideoWriter_fourcc(*"MP4V"), opt.fps,
+    #                       (int(1.5*opt.width*opt.block_size), opt.height*opt.block_size))
     while True:
         next_steps = env.get_next_states()
         next_actions, next_states = zip(*next_steps.items())
@@ -47,13 +47,11 @@ def test(opt):
         predictions = model(next_states)[:, 0]
         index = torch.argmax(predictions).item()
         action = next_actions[index]
-        _, done = env.step(action, render=True, video=out)
+        _, done = env.step(action, render=True) # , video=out
 
         if done:
-            out.release()
+            # out.release()
             break
-        
-
 
 if __name__ == "__main__":
     opt = get_args()
