@@ -14,7 +14,7 @@ SEED = 123 # Seed from original Tetris train.py
 PROJECT_ROOT = "."
 
 # --- Agent Types ---
-AGENT_TYPES = ["random", "dqn_original", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
+AGENT_TYPES = ["random", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
 
 # --- Model Paths & Directories ---
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models") 
@@ -67,6 +67,7 @@ DQN_NUM_EPOCHS = 1000000 # Number of piece placements/learning updates
 DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
 DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
+DQN_TRAIN_GAMES = 3000
 
 # DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
@@ -141,6 +142,7 @@ A2C_FC2_UNITS = 32
 
 # === PPO ===
 PPO_TOTAL_PIECES = 10000000 # Total piece placements
+PPO_TRAIN_GAMES = 5000 # Number of full games for training
 PPO_UPDATE_HORIZON = 1024 # Pieces collected before update
 PPO_EPOCHS_PER_UPDATE = 4 # SGD epochs over collected data
 PPO_BATCH_SIZE = 64
