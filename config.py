@@ -60,11 +60,10 @@ PRINT_EVERY_EPOCHS = 100
 SCORE_TARGET = 1000000 # Example target score for a full game (adjust as needed)
 
 # === DQN (adapted from original Tetris train.py and LunarLander) ===
-DQN_NUM_EPOCHS = 1000000 # Number of piece placements/learning updates
+DQN_NUM_EPOCHS = 3000 # Number of piece placements/learning updates
 DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
 DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
-DQN_TRAIN_GAMES = 30000
 
 # DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
