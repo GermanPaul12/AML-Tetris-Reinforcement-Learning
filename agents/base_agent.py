@@ -1,71 +1,86 @@
 # tetris_rl_agents/agents/base_agent.py
-from abc import ABC, abstractmethod
-# No gymnasium needed if we pass state_size and action_size/info directly
+import torch
+from src.tetris import Tetris # For type hinting
 
-class BaseAgent(ABC):
-    def __init__(self, state_size: int): # Action space is dynamic in Tetris
+class BaseAgent:
+    def __init__(self, state_size):
         """
-        Initializes the agent.
-
         Args:
-            state_size (int): The dimensionality of the state space (4 for Tetris features).
-            # action_space_info: Information about the action space, not a fixed gym.space
+            state_size (int): The number of features in the state representation.
         """
         self.state_size = state_size
-        # self.action_space_info = action_space_info # Store if needed by agent
+        # Common attributes agents might have, can be overridden or extended
+        self.last_loss = None # For logging loss from train.py
 
-    @abstractmethod
-    def select_action(self, state_features, tetris_game_instance):
+    def select_action(self, current_board_features: torch.Tensor, 
+                      tetris_game_instance: Tetris, 
+                      epsilon_override: float = None) -> tuple:
         """
-        Selects an action tuple (x_pos, rotation_idx) based on the current state_features
-        and the possible next moves from tetris_game_instance.
+        Selects an action based on the current board features and game instance.
 
         Args:
-            state_features (torch.Tensor): The current feature vector of the board state.
-            tetris_game_instance (Tetris): The current instance of the Tetris game,
-                                           used to call tetris_game_instance.get_next_states().
+            current_board_features (torch.Tensor): Features of the board *before* current piece placement.
+            tetris_game_instance (Tetris): The current game instance to query for next possible states.
+            epsilon_override (float, optional): If provided, overrides the agent's internal epsilon (for exploration).
+
         Returns:
-            action_tuple (tuple): The chosen (x_position, rotation_index).
-            aux_info (dict, optional): Auxiliary information like log_probs for policy gradient methods.
+            tuple: (action_tuple, aux_info_dict)
+                action_tuple (tuple): (x_pos, rotation_idx) representing the chosen piece placement.
+                aux_info_dict (dict): Auxiliary information dictionary that might contain:
+                    'features_s_prime_chosen': Features of the board state *after* the chosen action.
+                    'current_board_features_s_t': Echo back of the input features.
+                    'log_prob': Log probability of the chosen action (for policy gradient methods).
+                    'entropy': Entropy of the policy (for policy gradient methods).
+                    'value_of_current_board': Value of the current board state (for actor-critic methods).
+                    'all_available_s_prime_features': List of features for all possible next states.
+                    'chosen_action_index': Index of the chosen action among possible next states.
         """
-        pass
+        raise NotImplementedError("Subclasses must implement select_action.")
 
-    def learn(self, state_features, action_tuple, reward, next_state_features, done,
-              game_instance_at_s=None, game_instance_at_s_prime=None, aux_info=None):
+    def learn(self, state_features: torch.Tensor, action_tuple: tuple, reward: float, 
+              next_state_features: torch.Tensor, done: bool, 
+              game_instance_at_s = None, game_instance_at_s_prime = None, # For agents needing full game state
+              aux_info: dict = None):
         """
-        Optional method for agents that learn from experience.
+        Primary learning step for agents that learn from individual transitions or need aux_info.
+        Called by the training loop after each env.step().
 
         Args:
-            state_features: Features of the state S_t before the action.
-            action_tuple: The action (A_t) taken (x_pos, rotation_idx).
-            reward: The reward (R_{t+1}) received.
-            next_state_features: Features of the state S_{t+1} after the action.
-            done (bool): True if the game/episode ended.
-            game_instance_at_s (Tetris, optional): Game state corresponding to state_features.
-                                                    Needed if agent must re-evaluate actions from S_t.
-            game_instance_at_s_prime (Tetris, optional): Game state corresponding to next_state_features.
-                                                       Needed for target calculation in DQN/A2C/PPO.
-            aux_info (dict, optional): Auxiliary info from select_action (e.g. log_probs).
+            state_features (torch.Tensor): Features of the board state S_t (before action_tuple).
+            action_tuple (tuple): The action (placement) taken.
+            reward (float): The reward R_{t+1} received after the action.
+            next_state_features (torch.Tensor): Features of the board state S_{t+1} (after action and new piece appears).
+            done (bool): True if the game ended after this transition.
+            game_instance_at_s (Tetris, optional): Full Tetris game instance at state S_t.
+            game_instance_at_s_prime (Tetris, optional): Full Tetris game instance at state S_{t+1}.
+            aux_info (dict, optional): Auxiliary information dictionary returned by select_action.
         """
-        pass
+        pass # Default implementation does nothing; override in subclasses.
+
+    def learn_episode(self):
+        """
+        Called at the end of a full episode (game).
+        Useful for episodic learning algorithms like REINFORCE.
+        """
+        pass # Default implementation does nothing.
 
     def reset(self):
         """
-        Optional: Resets agent's internal state at the start of a new game/episode.
-        (e.g., for epsilon decay in DQN, or clearing buffers in REINFORCE).
+        Called at the start of each new game/episode by the training loop.
+        Allows the agent to reset any internal episodic state.
         """
-        pass
+        pass # Default implementation does nothing.
 
-    def save(self, filepath):
-        """Abstract method to save agent's model/parameters."""
-        # Default can be pass, or raise NotImplementedError if all agents must save.
-        # For PPO, filepath might be a prefix, and it saves actor and critic.
-        # For GA/ES, it saves the best policy network.
-        print(f"INFO: Base save called for {self.__class__.__name__}. Implement in child if needed.")
-        pass
+    def save(self, filename_primary=None, filename_secondary=None):
+        """
+        Saves the agent's model(s).
+        PPO might use filename_primary for actor and filename_secondary for critic.
+        Other agents might only use filename_primary.
+        """
+        raise NotImplementedError("Subclasses must implement save.")
 
-
-    def load(self, filepath):
-        """Abstract method to load agent's model/parameters."""
-        print(f"INFO: Base load called for {self.__class__.__name__}. Implement in child if needed.")
-        pass
+    def load(self, filename_primary=None, filename_secondary=None):
+        """
+        Loads the agent's model(s).
+        """
+        raise NotImplementedError("Subclasses must implement load.")

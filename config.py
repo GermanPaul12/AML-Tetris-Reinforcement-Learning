@@ -19,9 +19,6 @@ AGENT_TYPES = ["random", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
 # --- Model Paths & Directories ---
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models") 
 
-ORIGINAL_DQN_MODEL_FILENAME = "dqn_tetris_original_impl.pth"
-ORIGINAL_DQN_MODEL_PATH = os.path.join(MODEL_DIR, ORIGINAL_DQN_MODEL_FILENAME)
-
 DQN_MODEL_FILENAME = "dqn_tetris.pth"
 DQN_MODEL_PATH = os.path.join(MODEL_DIR, DQN_MODEL_FILENAME)
 
@@ -67,7 +64,7 @@ DQN_NUM_EPOCHS = 1000000 # Number of piece placements/learning updates
 DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
 DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
-DQN_TRAIN_GAMES = 3000
+DQN_TRAIN_GAMES = 30000
 
 # DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
@@ -78,11 +75,11 @@ DQN_UPDATE_EVERY = 1            # For Tetris, learn after every piece placement
 DQN_TARGET_UPDATE_EVERY = 1000  # How many learning steps before target net update
 DQN_EPSILON_START = 1.0
 DQN_EPSILON_MIN = 1e-3
-DQN_EPSILON_DECAY_EPOCHS = 5000 # Epochs over which epsilon decays
+DQN_EPSILON_DECAY_EPOCHS = 2000 # Epochs over which epsilon decays
 
-# DQN Network Architecture (like original Tetris DeepQNetwork)
-DQN_FC1_UNITS = 32
-DQN_FC2_UNITS = 32
+# DQN Network Architecture 
+DQN_FC1_UNITS = 64
+DQN_FC2_UNITS = 64
 # Output is 1, as it predicts Q-value for a *given* state (which is state after action)
 
 # === Genetic Algorithm (GA) ===
