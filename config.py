@@ -63,7 +63,7 @@ SCORE_TARGET = 1000000 # Example target score for a full game (adjust as needed)
 DQN_NUM_EPOCHS = 3000 # Number of piece placements/learning updates
 DQN_MAX_T_PER_GAME_EVAL = 10000 # Max pieces for printing game scores
 DQN_PRINT_EVERY_GAMES = 10 # Print full game stats every N games
-DQN_TARGET_GAME_SCORE = 1000000 # Target score for a full game
+DQN_TARGET_GAME_SCORE = 5000000 # Target score for a full game
 
 # DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
@@ -111,20 +111,20 @@ ES_FC1_UNITS = 32
 ES_FC2_UNITS = 32 
 
 # === REINFORCE ===
-REINFORCE_TRAIN_GAMES = 5000 # Number of full games
+REINFORCE_TRAIN_GAMES = 50000 # Number of full games
 REINFORCE_MAX_PIECES_PER_GAME = 1000000000
 REINFORCE_PRINT_EVERY_GAMES = 10
 REINFORCE_TARGET_GAME_SCORE = 1000000
 
 REINFORCE_LEARNING_RATE = 1e-4
 REINFORCE_GAMMA = 0.99
-REINFORCE_FC1_UNITS = 32
-REINFORCE_FC2_UNITS = 32
+REINFORCE_FC1_UNITS = 128
+REINFORCE_FC2_UNITS = 128
 # Policy network output 1 (score for a given state_after_action)
 
 # === A2C ===
-A2C_TRAIN_GAMES = 5000
-A2C_MAX_PIECES_PER_GAME = 1000000000
+A2C_TRAIN_GAMES = 50000
+A2C_MAX_PIECES_PER_GAME = 10000000000
 A2C_PRINT_EVERY_GAMES = 10
 A2C_TARGET_GAME_SCORE = 1000000
 
@@ -132,13 +132,13 @@ A2C_LEARNING_RATE = 7e-4
 A2C_GAMMA = 0.99
 A2C_ENTROPY_COEFF = 0.01
 A2C_VALUE_LOSS_COEFF = 0.5
-A2C_FC1_UNITS = 32  # Shared layers
-A2C_FC2_UNITS = 32
+A2C_FC1_UNITS = 64  # Shared layers
+A2C_FC2_UNITS = 64
 # Actor head outputs 1 (score for state_after_action), Critic head outputs 1 (value for state_before_action)
 
 # === PPO ===
-PPO_TOTAL_PIECES = 10000000 # Total piece placements
-PPO_TRAIN_GAMES = 5000 # Number of full games for training
+PPO_TOTAL_PIECES = 1000000000 # Total piece placements
+PPO_TRAIN_GAMES = 50000 # Number of full games for training
 PPO_UPDATE_HORIZON = 1024 # Pieces collected before update
 PPO_EPOCHS_PER_UPDATE = 4 # SGD epochs over collected data
 PPO_BATCH_SIZE = 64
@@ -153,10 +153,10 @@ PPO_GAE_LAMBDA = 0.95
 PPO_CLIP_EPSILON = 0.2
 PPO_ENTROPY_COEFF = 0.01
 PPO_VALUE_LOSS_COEFF = 0.5
-PPO_ACTOR_FC1 = 32 # Actor net: state_after_action -> score
-PPO_ACTOR_FC2 = 32
-PPO_CRITIC_FC1 = 32 # Critic net: state_before_action -> value
-PPO_CRITIC_FC2 = 32
+PPO_ACTOR_FC1 = 64 # Actor net: state_after_action -> score
+PPO_ACTOR_FC2 = 64
+PPO_CRITIC_FC1 = 64 # Critic net: state_before_action -> value
+PPO_CRITIC_FC2 = 64
 
 
 # --- Test Configuration (for test.py) ---
