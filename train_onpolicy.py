@@ -2,17 +2,17 @@
 import argparse
 import os
 import random
-import re
-
+import re  # For parsing filenames
 import numpy as np
 import torch
-import config as tetris_config  # Your project's config
+import time  # For printing frequency
 
+import config as tetris_config
 from agents import AGENT_REGISTRY
-from agents.ppo_agent import PPOAgent  # For PPO specific logic if needed
 from src.tetris import Tetris
 
 
+# --- Helper Functions for Model Saving (Copied from train_dqn_reinforce.py or a shared utils.py) ---
 def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
     processed_agent_type = agent_type_str.replace("_", "-")
     if agent_type_str == "ppo":
@@ -21,7 +21,7 @@ def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
         elif is_critic:
             return "ppo-critic"
         else:
-            return "ppo-model"
+            return "ppo-model"  # Should not be hit if saving actor/critic
     return processed_agent_type
 
 
@@ -47,24 +47,20 @@ def find_best_existing_score(agent_prefix, model_dir):
             )
             return max_score
     for filename in os.listdir(model_dir):
-        score = parse_score_from_filename(filename, agent_prefix)
-        if score is not None and score > max_score:
-            max_score = score
+        score_from_file = parse_score_from_filename(
+            filename, agent_prefix
+        )  # Renamed to avoid conflict
+        if score_from_file is not None and score_from_file > max_score:
+            max_score = score_from_file
     return max_score
+
+
+# --- End Helper Functions ---
 
 
 def get_args():
     parser = argparse.ArgumentParser("""Train A2C or PPO Agents for Tetris""")
-
-    parser.add_argument(
-        "--agent_type",
-        type=str,
-        default="a2c",
-        choices=["a2c", "ppo"],  # Restrict choices
-        help="Type of on-policy agent to train (a2c or ppo).",
-    )
-
-    # Different ways to specify training duration for these agents
+    parser.add_argument("--agent_type", type=str, default="ppo", choices=["a2c", "ppo"])
     parser.add_argument(
         "--total_steps",
         type=int,
@@ -75,18 +71,23 @@ def get_args():
         "--num_games",
         type=int,
         default=None,
-        help="Total number of games to complete training.",
+        help="Alternative: Total number of games to complete training.",
     )
     parser.add_argument("--render_game", action="store_true", help="Render the game.")
-
-    args = parser.parse_args()
-    return args
+    parser.add_argument(
+        "--print_every_games",
+        type=int,
+        default=10,
+        help="Frequency of printing average scores (in games).",
+    )
+    return parser.parse_args()
 
 
 def train():
     opt = get_args()
     tetris_config.ensure_model_dir_exists()
 
+    # --- Seeding ---
     if torch.cuda.is_available():
         torch.cuda.manual_seed(tetris_config.SEED)
     else:
@@ -108,35 +109,42 @@ def train():
     print(f"\n--- Training Agent: {opt.agent_type.upper()} (On-Policy Style Loop) ---")
     agent = agent_class(state_size=tetris_config.STATE_SIZE, seed=tetris_config.SEED)
 
-    # Determine training duration
-    # Prioritize total_steps, then num_games, then agent's config (e.g., PPO_TOTAL_PIECES)
+    # --- Determine training duration ---
     max_steps = opt.total_steps
     max_games = opt.num_games
-
     if max_steps is None and max_games is None:
         if opt.agent_type == "ppo":
-            max_steps = getattr(tetris_config, "PPO_TOTAL_PIECES", 1000000)
+            max_steps = getattr(
+                tetris_config, "PPO_TOTAL_PIECES", 2000000
+            )  # Increased default
             print(f"Using PPO_TOTAL_PIECES from config for max_steps: {max_steps}")
         elif opt.agent_type == "a2c":
             max_games = getattr(
-                tetris_config, "A2C_TRAIN_GAMES", 5000
-            )  # A2C might use games
+                tetris_config, "A2C_TRAIN_GAMES", 10000
+            )  # Increased default
             print(f"Using A2C_TRAIN_GAMES from config for max_games: {max_games}")
-        else:  # Fallback
-            max_steps = 1000000
-            print(f"Using default max_steps: {max_steps}")
+        else:
+            max_steps = 2000000
+            print(f"Warning: Using default max_steps: {max_steps}")
 
     EARLY_STOPPING_TARGET_SCORE = getattr(
-        tetris_config, f"{opt.agent_type.upper()}_TARGET_GAME_SCORE", 1000000
-    )
+        tetris_config, f"{opt.agent_type.upper()}_TARGET_GAME_SCORE", 2000000
+    )  # Higher target
 
     current_model_base_dir = tetris_config.MODEL_DIR
-    # ... (test_suite dir handling)
+    if "test_suite" in tetris_config.__name__ and hasattr(
+        tetris_config, "PROJECT_ROOT"
+    ):
+        current_model_base_dir = os.path.join(
+            tetris_config.PROJECT_ROOT, "models_test_suite"
+        )
+        if not os.path.exists(current_model_base_dir):
+            os.makedirs(current_model_base_dir, exist_ok=True)
 
     print(
-        f"Starting training. Max steps: {max_steps}, Max games: {max_games}. Early stopping: {EARLY_STOPPING_TARGET_SCORE}."
+        f"Starting training. Max steps: {max_steps}, Max games: {max_games}. Early stopping score: {EARLY_STOPPING_TARGET_SCORE}."
     )
-    print(f"Models will be saved to '{current_model_base_dir}'.")
+    print(f"Models will be saved to '{current_model_base_dir}' on new best score.")
 
     s_t_board_features = env.reset()
     if tetris_config.DEVICE.type == "cuda":
@@ -146,23 +154,29 @@ def train():
     games_played_count = 0
     current_game_score = 0
 
-    highest_score_this_session = -1
+    # For printing average scores
+    total_score_for_avg = 0
+    games_since_last_print = 0
+
+    highest_score_this_session = -1  # Tracks best score in the current training run
+
     training_complete = False
+    last_print_time = time.time()
 
     while not training_complete:
-        if max_steps is not None and current_total_steps >= max_steps:
-            print(f"Reached max_steps: {max_steps}")
+        # --- Check termination conditions ---
+        if max_steps and current_total_steps >= max_steps:
+            print(f"\nReached max_steps: {current_total_steps}")
             training_complete = True
             break
-        if max_games is not None and games_played_count >= max_games:
-            print(f"Reached max_games: {max_games}")
+        if max_games and games_played_count >= max_games:
+            print(f"\nReached max_games: {games_played_count}")
             training_complete = True
             break
 
-        # For on-policy agents, epsilon_override is typically not used.
         action_tuple, aux_info = agent.select_action(s_t_board_features, env)
-
         reward, game_over = env.step(action_tuple, render=opt.render_game)
+
         current_game_score += int(reward)
         current_total_steps += 1
 
@@ -170,8 +184,6 @@ def train():
         if tetris_config.DEVICE.type == "cuda":
             s_prime_actual_features = s_prime_actual_features.cuda()
 
-        # Agent learns per step (A2C) or adds to buffer (PPO)
-        # PPO's learn method might trigger an update if its horizon is met.
         agent.learn(
             state_features=s_t_board_features,
             action_tuple=action_tuple,
@@ -185,40 +197,21 @@ def train():
 
         if game_over:
             games_played_count += 1
+            games_since_last_print += 1
+            total_score_for_avg += current_game_score
 
-            # PPO specific: might learn from remaining buffer at episode end
-            if isinstance(agent, PPOAgent):  # Check if PPOAgent has a method for this
-                if hasattr(agent, "learn_on_episode_end") and callable(
-                    getattr(agent, "learn_on_episode_end")
-                ):
-                    agent.learn_on_episode_end()
-                elif (
-                    hasattr(agent, "memory")
-                    and len(agent.memory) > 0
-                    and hasattr(agent, "learn_from_memory")
-                    and callable(getattr(agent, "learn_from_memory"))
-                ):
-                    # A more generic call if PPO stores data and processes it
-                    print(
-                        f"PPO: Processing remaining buffer at end of game {games_played_count}"
-                    )
-                    agent.learn_from_memory(
-                        final_val_obs=None
-                    )  # Assuming this is the interface
+            # PPO: Learn from any remaining buffer at episode end
+            if opt.agent_type == "ppo" and hasattr(agent, "learn_on_episode_end"):
+                agent.learn_on_episode_end()
 
             loss_str = "Loss: N/A"
-            # A2C/PPO might have actor_loss, critic_loss in agent.last_loss or separate attributes
             if hasattr(agent, "last_loss") and agent.last_loss is not None:
-                if (
-                    isinstance(agent.last_loss, tuple) and len(agent.last_loss) == 2
-                ):  # (actor_loss, critic_loss)
+                if isinstance(agent.last_loss, tuple) and len(agent.last_loss) == 2:
                     try:
                         loss_str = f"Loss (A/C): {float(agent.last_loss[0]):.4f}/{float(agent.last_loss[1]):.4f}"
                     except:
                         loss_str = "Loss (A/C): (err)"
-                elif isinstance(
-                    agent.last_loss, dict
-                ):  # For PPO storing multiple losses
+                elif isinstance(agent.last_loss, dict):
                     parts = [
                         f"{k.capitalize()}:{float(v_loss):.4f}"
                         for k, v_loss in agent.last_loss.items()
@@ -227,52 +220,76 @@ def train():
                     loss_str = (
                         f"Loss ({', '.join(parts)})" if parts else "Loss: (empty dict)"
                     )
-                else:  # Single loss value
+                else:
                     try:
                         loss_str = f"Loss: {float(agent.last_loss):.4f}"
                     except:
                         loss_str = "Loss: (err)"
 
-            # PPO might print stats based on its update cycles, not just game end
-            # For simplicity, we print per game here.
-            print(
-                f"Game: {games_played_count} | Steps: {current_total_steps} | "
-                f"Score: {current_game_score} | Lines: {env.cleared_lines} | {loss_str}"
-            )
+            # --- Print periodic average score ---
+            if games_since_last_print >= opt.print_every_games:
+                avg_score_since_last_print = (
+                    total_score_for_avg / games_since_last_print
+                    if games_since_last_print > 0
+                    else 0
+                )
+                elapsed_time = time.time() - last_print_time
+                steps_per_sec = (
+                    (
+                        current_total_steps
+                        - (getattr(agent, "_last_print_steps", 0) or 0)
+                    )
+                    / elapsed_time
+                    if elapsed_time > 0
+                    else 0
+                )
+                agent._last_print_steps = current_total_steps  # Store for next SPS calc
 
-            # --- Model Saving Logic (adapted for PPO) ---
+                print(
+                    f"Game: {games_played_count} | Steps: {current_total_steps} | "
+                    f"Avg Score (last {games_since_last_print} games): {avg_score_since_last_print:.2f} | "
+                    f"SPS: {steps_per_sec:.2f} | "
+                    f"Score: {current_game_score} | Lines cleared: {env.cleared_lines} | {loss_str}"
+                )
+                total_score_for_avg = 0
+                games_since_last_print = 0
+                last_print_time = time.time()
+
+            # --- Model Saving Logic ---
             if current_game_score > highest_score_this_session:
                 highest_score_this_session = current_game_score
                 print(
-                    f"** New best score for this session: {highest_score_this_session}. Checking against disk. **"
+                    f"** New best score this session: {highest_score_this_session}. Checking against disk. **"
                 )
+
                 if opt.agent_type == "ppo":
                     actor_prefix = get_agent_file_prefix(opt.agent_type, is_actor=True)
                     critic_prefix = get_agent_file_prefix(
                         opt.agent_type, is_critic=True
                     )
-                    disk_best_score_actor = find_best_existing_score(
+                    # For PPO, we check against the score associated with the actor model on disk
+                    disk_best_score = find_best_existing_score(
                         actor_prefix, current_model_base_dir
                     )
-                    # PPO saving might be tied to a single score for both actor/critic
-                    # For simplicity, using actor_prefix score as the reference.
-                    if current_game_score > disk_best_score_actor:
+
+                    if current_game_score > disk_best_score:
                         print(
-                            f"Current PPO score {current_game_score} > disk best {disk_best_score_actor}. Saving."
+                            f"Current game score {current_game_score} > PPO disk best score {disk_best_score}. Saving."
                         )
-                        if disk_best_score_actor > -1:
+                        if disk_best_score > -1:  # Remove old PPO files
                             old_actor_path = os.path.join(
                                 current_model_base_dir,
-                                f"{actor_prefix}_score_{disk_best_score_actor}.pth",
+                                f"{actor_prefix}_score_{disk_best_score}.pth",
                             )
                             old_critic_path = os.path.join(
                                 current_model_base_dir,
-                                f"{critic_prefix}_score_{disk_best_score_actor}.pth",
+                                f"{critic_prefix}_score_{disk_best_score}.pth",
                             )
                             if os.path.exists(old_actor_path):
                                 os.remove(old_actor_path)
                             if os.path.exists(old_critic_path):
                                 os.remove(old_critic_path)
+
                         new_actor_path = os.path.join(
                             current_model_base_dir,
                             f"{actor_prefix}_score_{current_game_score}.pth",
@@ -281,20 +298,27 @@ def train():
                             current_model_base_dir,
                             f"{critic_prefix}_score_{current_game_score}.pth",
                         )
-                        agent.save(new_actor_path, new_critic_path)  # PPO agent's save
+                        agent.save(
+                            new_actor_path, new_critic_path
+                        )  # PPO agent's save method
                         print(
-                            f"Saved PPO model (Score: {current_game_score}) to {new_actor_path} & {new_critic_path}"
+                            f"Saved PPO model (Score: {current_game_score}) to {new_actor_path} and {new_critic_path}"
                         )
+                    else:
+                        print(
+                            f"Session best {current_game_score}, but PPO disk best is {disk_best_score}. Not overwriting."
+                        )
+
                 elif (
                     opt.agent_type == "a2c"
-                ):  # A2C usually has one model or saves components similarly
+                ):  # A2C typically has one model or saves components similarly
                     agent_prefix = get_agent_file_prefix(opt.agent_type)
                     disk_best_score = find_best_existing_score(
                         agent_prefix, current_model_base_dir
                     )
                     if current_game_score > disk_best_score:
                         print(
-                            f"Current A2C score {current_game_score} > disk best {disk_best_score}. Saving."
+                            f"Current game score {current_game_score} > A2C disk best score {disk_best_score}. Saving."
                         )
                         if disk_best_score > -1:
                             old_model_path = os.path.join(
@@ -307,18 +331,23 @@ def train():
                             current_model_base_dir,
                             f"{agent_prefix}_score_{current_game_score}.pth",
                         )
-                        agent.save(new_model_path)  # A2C agent's save
+                        agent.save(new_model_path)  # A2C agent's save method
                         print(
                             f"Saved A2C model (Score: {current_game_score}) to {new_model_path}"
+                        )
+                    else:
+                        print(
+                            f"Session best {current_game_score}, but A2C disk best is {disk_best_score}. Not overwriting."
                         )
             # --- End Model Saving ---
 
             if current_game_score >= EARLY_STOPPING_TARGET_SCORE:
                 print(
-                    f"\nEarly stopping: Target score {EARLY_STOPPING_TARGET_SCORE} reached."
+                    f"\nEarly stopping: Target score {EARLY_STOPPING_TARGET_SCORE} reached with {current_game_score}."
                 )
                 training_complete = True
 
+            # Reset for next game
             agent.reset()
             current_game_score = 0
             s_t_board_features = env.reset()
@@ -326,6 +355,14 @@ def train():
                 s_t_board_features = s_t_board_features.cuda()
 
     print("\nTraining finished.")
+    if highest_score_this_session > -1:
+        print(
+            f"Highest score achieved in this training session: {highest_score_this_session}"
+        )
+    elif games_played_count > 0:
+        print("No new high scores recorded in this session.")
+    else:
+        print("No games were completed in this session.")
 
 
 if __name__ == "__main__":

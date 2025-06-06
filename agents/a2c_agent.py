@@ -7,33 +7,32 @@ from torch.distributions import Categorical
 import random
 import os
 
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-from src.tetris import Tetris
-
+from src.tetris import Tetris  # For type hinting
 import config as global_config
 from .base_agent import BaseAgent
 
 DEVICE = global_config.DEVICE
 
+
 class ActorCriticNetwork(nn.Module):
-    def __init__(self, state_size, seed=0,
-                 fc1_units=global_config.A2C_FC1_UNITS,
-                 fc2_units=global_config.A2C_FC2_UNITS):
+    def __init__(
+        self,
+        state_size,
+        seed=0,
+        fc1_units=global_config.A2C_FC1_UNITS,
+        fc2_units=global_config.A2C_FC2_UNITS,
+    ):
         super(ActorCriticNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
-        
-        # Shared layers
+
+        # Shared layers processing S_t or S' features
         self.fc_shared1 = nn.Linear(state_size, fc1_units)
         self.fc_shared2 = nn.Linear(fc1_units, fc2_units)
 
-        # Actor head: Takes shared features, outputs score for a *potential next state*
-        # Its input features will be those from get_next_states()
-        self.actor_head = nn.Linear(fc2_units, 1) 
+        # Actor head: Takes processed features (from S'), outputs a score for that S'
+        self.actor_head = nn.Linear(fc2_units, 1)
 
-        # Critic head: Takes shared features, outputs value for *current board state*
-        # Its input features will be the board state *before* action selection
+        # Critic head: Takes processed features (from S_t), outputs V(S_t)
         self.critic_head = nn.Linear(fc2_units, 1)
         self._create_weights()
 
@@ -42,131 +41,161 @@ class ActorCriticNetwork(nn.Module):
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, 0)
-    
-    def forward(self, state_features_input, is_actor_pass=False):
-        """
-        Forward pass.
-        If is_actor_pass is True, state_features_input are features of potential next states (batch).
-        If is_actor_pass is False, state_features_input is feature of a current state (for critic).
-        """
-        x = F.relu(self.fc_shared1(state_features_input))
+
+    def get_actor_scores(self, s_prime_features_batch):
+        """Passes a batch of S' features through shared layers and actor head."""
+        x = F.relu(self.fc_shared1(s_prime_features_batch))
         x_shared = F.relu(self.fc_shared2(x))
-        
-        if is_actor_pass:
-            return self.actor_head(x_shared) # Scores for (batch of) potential next states
-        else:
-            return self.critic_head(x_shared) # Value for (a single or batch of) current state(s)
+        return self.actor_head(x_shared)  # Scores for potential S' states
+
+    def get_critic_value(self, s_t_features):
+        """Passes S_t features through shared layers and critic head."""
+        x = F.relu(self.fc_shared1(s_t_features))
+        x_shared = F.relu(self.fc_shared2(x))
+        return self.critic_head(x_shared)  # Value for current S_t
 
 
 class A2CAgent(BaseAgent):
-    def __init__(self, state_size, seed=0,
-                 learning_rate=global_config.A2C_LEARNING_RATE,
-                 gamma=global_config.A2C_GAMMA,
-                 entropy_coeff=global_config.A2C_ENTROPY_COEFF,
-                 value_loss_coeff=global_config.A2C_VALUE_LOSS_COEFF):
+    def __init__(self, state_size, seed=0):
         super().__init__(state_size)
         self._agent_seed = seed
         random.seed(self._agent_seed)
         torch.manual_seed(self._agent_seed)
-        if DEVICE.type == 'cuda':
+        if DEVICE.type == "cuda":
             torch.cuda.manual_seed_all(self._agent_seed)
 
-        self.gamma = gamma
-        self.entropy_coeff = entropy_coeff
-        self.value_loss_coeff = value_loss_coeff
+        self.gamma = global_config.A2C_GAMMA
+        self.entropy_coeff = global_config.A2C_ENTROPY_COEFF
+        self.value_loss_coeff = global_config.A2C_VALUE_LOSS_COEFF
+        learning_rate = global_config.A2C_LEARNING_RATE
 
         self.network = ActorCriticNetwork(state_size, seed=self._agent_seed).to(DEVICE)
         self.optimizer = optim.Adam(self.network.parameters(), lr=learning_rate)
 
-        # For on-policy updates, A2C typically doesn't need a large replay buffer.
-        # It learns from the (state, action, reward, next_state) tuple directly.
-        # However, some A2C variants (like A3C or N-step A2C) collect trajectories.
-        # This basic A2C will learn per piece placement.
+        self.last_loss = None  # Stores (actor_loss, critic_loss)
 
-        print(f"A2C Agent initialized. LR: {learning_rate}, Gamma: {gamma}, Device: {DEVICE}")
+        print(
+            f"A2C Agent initialized. LR: {learning_rate}, Gamma: {self.gamma}, Device: {DEVICE}"
+        )
+        print(
+            f"  Entropy Coeff: {self.entropy_coeff}, Value Loss Coeff: {self.value_loss_coeff}"
+        )
 
-    def select_action(self, current_board_features: torch.Tensor, tetris_game_instance: Tetris, epsilon_override=None):
-        """
-        Args:
-            current_board_features (torch.Tensor): Features of the board *before* current piece placement.
-                                                   Used by critic if needed during selection, but mainly for learning.
-            tetris_game_instance (Tetris): Game object to get next possible states.
-        Returns:
-            action_tuple (tuple): (x_pos, rotation_idx)
-            aux_info (dict): Contains 'log_prob', 'entropy', 'features_after_chosen_action', 'value_of_current_board'
-        """
-        next_steps_dict = tetris_game_instance.get_next_states()
-        if not next_steps_dict: # Should be rare
-            return (tetris_game_instance.width // 2, 0), {} 
+    def select_action(
+        self,
+        current_board_features_s_t: torch.Tensor,
+        tetris_game_instance: Tetris,
+        epsilon_override=None,
+    ):  # Epsilon not used by A2C for exploration
+        next_steps_dict = (
+            tetris_game_instance.get_next_states()
+        )  # {action_tuple: S'_features}
+        if not next_steps_dict:
+            # Fallback: should ideally not happen if game isn't over
+            chosen_action_tuple = (tetris_game_instance.width // 2, 0)
+            return chosen_action_tuple, {
+                "log_prob": torch.tensor(0.0, device=DEVICE),
+                "entropy": torch.tensor(0.0, device=DEVICE),
+                "value_s_t": torch.tensor(0.0, device=DEVICE),  # Default/dummy value
+                "features_s_prime_chosen": current_board_features_s_t.to(DEVICE),
+                "current_board_features_s_t": current_board_features_s_t.to(DEVICE),
+            }
 
         possible_actions_tuples = list(next_steps_dict.keys())
-        # feature_tensors_for_next_steps are features of S' (if action taken)
-        feature_tensors_for_next_steps = torch.stack(list(next_steps_dict.values())).to(DEVICE)
+        s_prime_potential_features_list = [
+            s_prime_feat.to(DEVICE) for s_prime_feat in next_steps_dict.values()
+        ]
+        s_prime_features_batch = torch.stack(s_prime_potential_features_list)
 
-        self.network.eval() # Eval mode for selection
-        with torch.no_grad():
-            # Actor pass: get scores for all potential next states S'
-            action_scores = self.network(feature_tensors_for_next_steps, is_actor_pass=True).squeeze(-1)
-            # Critic pass: get value V(S_current)
-            # Note: current_board_features is for the board state *before* placing the current piece.
-            value_of_current_board = self.network(current_board_features.unsqueeze(0).to(DEVICE), is_actor_pass=False) # Add batch dim
-        self.network.train() # Back to train mode
+        self.network.train()
 
-        action_probs = F.softmax(action_scores, dim=0) # Probabilities over possible S'
-        dist = Categorical(action_probs)
-        chosen_idx = dist.sample()
-        
-        log_prob_tensor = dist.log_prob(chosen_idx)
-        entropy_tensor = dist.entropy()
+        action_scores = self.network.get_actor_scores(s_prime_features_batch).squeeze(
+            -1
+        )
 
-        chosen_action_tuple = possible_actions_tuples[chosen_idx.item()]
-        features_after_chosen_action = feature_tensors_for_next_steps[chosen_idx.item()]
+        value_s_t = self.network.get_critic_value(
+            current_board_features_s_t.unsqueeze(0).to(DEVICE)
+        )
+
+        dist = Categorical(logits=action_scores)
+        chosen_idx_tensor = dist.sample()
+        chosen_idx = chosen_idx_tensor.item()
+
+        log_prob_chosen_action = dist.log_prob(chosen_idx_tensor)
+        entropy = dist.entropy()
+
+        chosen_action_tuple = possible_actions_tuples[chosen_idx]
+        features_s_prime_chosen = s_prime_potential_features_list[chosen_idx]
 
         aux_info = {
-            'log_prob': log_prob_tensor,
-            'entropy': entropy_tensor,
-            'features_after_chosen_action': features_after_chosen_action, # S' features
-            'value_of_current_board': value_of_current_board.squeeze() # V(S_current)
+            "log_prob": log_prob_chosen_action,
+            "entropy": entropy,
+            "value_s_t": value_s_t.squeeze(),
+            "features_s_prime_chosen": features_s_prime_chosen,
+            "current_board_features_s_t": current_board_features_s_t.to(DEVICE),
         }
         return chosen_action_tuple, aux_info
 
-    def learn(self, state_features, action_tuple, reward, next_state_features, done, # Renamed params
-              game_instance_at_s=None, game_instance_at_s_prime=None, aux_info=None):
-        """
-        A2C learns on-policy from each step.
-        `state_features`: S_t (board before current piece placement) - THIS IS current_board_features from train.py
-        `aux_info['log_prob']`: log_prob of choosing action leading to S_t'
-        `aux_info['entropy']`: entropy of policy at S_t
-        `aux_info['value_of_current_board']`: V(S_t) estimated by critic
-        `reward`: R_{t+1} (reward for placing the piece)
-        `next_state_features`: S_{t+1} (board after new piece appears) - THIS IS next_board_features_actual from train.py
-        `done`: game over flag for S_{t+1}
-        """
-        log_prob = aux_info['log_prob']
-        entropy = aux_info['entropy']
-        value_s_current = aux_info['value_of_current_board'] 
+    # Corrected learn method signature to match train_onpolicy.py's call
+    def learn(
+        self,
+        state_features: torch.Tensor,  # This is S_t (from s_t_board_features)
+        action_tuple: tuple,
+        reward: float,
+        next_state_features: torch.Tensor,  # This is S_{t+1} (from s_prime_actual_features)
+        done: bool,
+        aux_info: dict = None,
+    ):
+        if not aux_info:
+            self.last_loss = None
+            return
 
-        reward_tensor = torch.tensor([reward], dtype=torch.float32).to(DEVICE)
-        done_tensor = torch.tensor([done], dtype=torch.float32).to(DEVICE)
-        
-        v_s_prime_actual_online = torch.tensor([0.0], dtype=torch.float32).to(DEVICE)
+        log_prob = aux_info["log_prob"]
+        entropy = aux_info["entropy"]
+        value_s_t_old = aux_info[
+            "value_s_t"
+        ]  # V(S_t) from selection time (aux_info['value_s_t'])
+
+        reward_tensor = torch.tensor([reward], dtype=torch.float32, device=DEVICE)
+
+        value_s_t_plus_1 = torch.tensor([0.0], dtype=torch.float32, device=DEVICE)
         if not done:
             with torch.no_grad():
-                 v_s_prime_actual_online = self.network(next_state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
-        
-        td_target_aggressive = reward_tensor + self.gamma * v_s_prime_actual_online * (1 - done_tensor)
-        
-        advantage = (td_target_aggressive - value_s_current).detach() 
-        actor_loss = -(log_prob * advantage)
-        
-        current_value_re_eval = self.network(state_features.unsqueeze(0).to(DEVICE), is_actor_pass=False).squeeze()
-        critic_loss = F.mse_loss(current_value_re_eval, td_target_aggressive.detach()) # Target is detached
+                self.network.eval()
+                # Use 'next_state_features' which is S_{t+1}
+                value_s_t_plus_1 = self.network.get_critic_value(
+                    next_state_features.unsqueeze(0).to(DEVICE)
+                ).squeeze()
+                self.network.train()
 
-        total_loss = actor_loss + self.value_loss_coeff * critic_loss - self.entropy_coeff * entropy
-        
+        td_target = reward_tensor + self.gamma * value_s_t_plus_1 * (1.0 - float(done))
+        advantage = (td_target - value_s_t_old).detach()
+
+        actor_loss = -(log_prob * advantage).mean()
+
+        # Re-evaluate V(S_t) for critic loss using current network parameters
+        # Use 'state_features' which is S_t
+        current_value_s_t_re_eval = self.network.get_critic_value(
+            state_features.unsqueeze(0).to(DEVICE)
+        ).squeeze()
+        critic_loss = F.mse_loss(current_value_s_t_re_eval, td_target.detach())
+
+        total_loss = (
+            actor_loss
+            + self.value_loss_coeff * critic_loss
+            - self.entropy_coeff * entropy.mean()
+        )
+
         self.optimizer.zero_grad()
         total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.network.parameters(), 0.5)
         self.optimizer.step()
+
+        self.last_loss = (actor_loss.item(), critic_loss.item())
+
+    def reset(self):
+        self.last_loss = None
+        pass
 
     def save(self, filepath=None):
         path = filepath if filepath else global_config.A2C_MODEL_PATH
@@ -178,8 +207,7 @@ class A2CAgent(BaseAgent):
         path = filepath if filepath else global_config.A2C_MODEL_PATH
         if os.path.exists(path):
             self.network.load_state_dict(torch.load(path, map_location=DEVICE))
-            self.network.eval()
+            self.network.train()
             print(f"A2C Agent loaded from {path}")
         else:
-            print(f"Error: A2C model not found at {path}")
-            raise FileNotFoundError(f"A2C model not found: {path}")
+            print(f"Error: A2C model not found at {path}. Agent remains uninitialized.")
