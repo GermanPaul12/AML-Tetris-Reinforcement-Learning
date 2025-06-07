@@ -151,9 +151,7 @@ def train():
         s_t_board_features = s_t_board_features.cuda()
 
     current_epoch = 0
-    games_played_this_run = (
-        0 
-    )
+    games_played_this_run = 0
     current_game_score = 0
     total_score_all_games = 0.0
 
