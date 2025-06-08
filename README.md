@@ -2,11 +2,9 @@
 
 Learning different Agents to play Tetris.
 
-
 ## Todo
 
 - ppo und a2c verbessern
-- Evaluation an neue Modelpaths anpassen
 - ReadMe schreiben
 - Enhancement von bestehenden Code (In Line Kommentare, vereinfachen, etc.)
 

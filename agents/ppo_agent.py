@@ -5,7 +5,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 import numpy as np
-import random
 import os
 
 from .base_agent import BaseAgent
@@ -14,7 +13,6 @@ import config as global_config
 DEVICE = global_config.DEVICE
 
 
-# --- Networks (Your existing ActorPPO and CriticPPO are perfect for this) ---
 class ActorPPO(nn.Module):
     def __init__(
         self,
@@ -183,7 +181,7 @@ class PPOAgent(BaseAgent):
             )  # No bootstrapping at terminal state
 
     def learn_from_memory(self, last_s_t_plus_1_features=None):
-        if len(self.memory["rewards"]) == 0: # Nothing to learn from
+        if len(self.memory["rewards"]) == 0:  # Nothing to learn from
             self.last_loss = {}
             return
 
@@ -191,37 +189,50 @@ class PPOAgent(BaseAgent):
         rewards = torch.tensor(self.memory["rewards"], dtype=torch.float32).to(DEVICE)
         dones = torch.tensor(self.memory["dones"], dtype=torch.float32).to(DEVICE)
         # Ensure values is a tensor, even if memory was cleared or just started
-        if not self.memory["values_s_t"]: # Should not happen if learn is called after select_action
-            print("Warning: PPO memory for values_s_t is empty during learn_from_memory.")
-            self.clear_memory() # Avoid processing inconsistent data
+        if not self.memory[
+            "values_s_t"
+        ]:  # Should not happen if learn is called after select_action
+            print(
+                "Warning: PPO memory for values_s_t is empty during learn_from_memory."
+            )
+            self.clear_memory()  # Avoid processing inconsistent data
             return
 
         values_cpu = self.memory["values_s_t"]
         # Check if elements are already tensors, if not, convert and stack
         if all(isinstance(v, torch.Tensor) for v in values_cpu):
-            values = torch.stack(values_cpu).squeeze().to(DEVICE) # Squeeze if they were [1]
-        else: # If they are floats/scalars from older storage
+            values = (
+                torch.stack(values_cpu).squeeze().to(DEVICE)
+            )  # Squeeze if they were [1]
+        else:  # If they are floats/scalars from older storage
             values = torch.tensor(values_cpu, dtype=torch.float32).to(DEVICE)
 
         # Ensure values tensor is not empty and has correct dimensions
-        if values.nelement() == 0 or values.dim() == 0: # if values became a scalar 0-dim tensor
-            if len(rewards) == 1 and values.nelement() == 1 and values.dim() == 0: # Single step in buffer, values is scalar
-                values = values.unsqueeze(0) # Make it 1D
+        if (
+            values.nelement() == 0 or values.dim() == 0
+        ):  # if values became a scalar 0-dim tensor
+            if (
+                len(rewards) == 1 and values.nelement() == 1 and values.dim() == 0
+            ):  # Single step in buffer, values is scalar
+                values = values.unsqueeze(0)  # Make it 1D
             else:
-                print(f"Warning: PPO values tensor is problematic. Shape: {values.shape}. Memory length: {len(rewards)}")
+                print(
+                    f"Warning: PPO values tensor is problematic. Shape: {values.shape}. Memory length: {len(rewards)}"
+                )
                 self.clear_memory()
                 return
-        
+
         # Ensure rewards, dones, values have the same length (number of trajectory steps)
         if not (len(rewards) == len(dones) == len(values)):
-            print(f"Warning: Mismatch in PPO memory lengths. R:{len(rewards)}, D:{len(dones)}, V:{len(values)}")
+            print(
+                f"Warning: Mismatch in PPO memory lengths. R:{len(rewards)}, D:{len(dones)}, V:{len(values)}"
+            )
             self.clear_memory()
             return
 
-
         advantages = []
         gae = 0.0
-        
+
         with torch.no_grad():
             if last_s_t_plus_1_features is not None and not self.memory["dones"][-1]:
                 last_value = self.critic(
@@ -233,31 +244,41 @@ class PPOAgent(BaseAgent):
         for i in reversed(range(len(rewards))):
             # Ensure values[i+1] access is safe
             next_val_bootstrap = values[i + 1] if i + 1 < len(values) else last_value
-            
-            delta = rewards[i] + self.gamma * next_val_bootstrap * (1 - dones[i]) - values[i]
+
+            delta = (
+                rewards[i]
+                + self.gamma * next_val_bootstrap * (1 - dones[i])
+                - values[i]
+            )
             gae = delta + self.gamma * self.gae_lambda * (1 - dones[i]) * gae
             advantages.insert(0, gae)
-        
-        if not advantages: # Should not happen if rewards list was not empty
+
+        if not advantages:  # Should not happen if rewards list was not empty
             self.clear_memory()
             return
 
         advantages = torch.stack(advantages)
-        returns_for_critic = advantages + values 
+        returns_for_critic = advantages + values
 
         # Normalize advantages
-        if advantages.numel() > 1: # CRITICAL FIX for std()
+        if advantages.numel() > 1:  # CRITICAL FIX for std()
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        elif advantages.numel() == 1: # Single advantage, set to 0 if not normalized (or keep as is)
-            advantages = torch.zeros_like(advantages) # Avoids issues, effectively no advantage scaling
+        elif (
+            advantages.numel() == 1
+        ):  # Single advantage, set to 0 if not normalized (or keep as is)
+            advantages = torch.zeros_like(
+                advantages
+            )  # Avoids issues, effectively no advantage scaling
             # Or: advantages = (advantages - advantages.mean()) # This would be 0
 
         # --- 2. Convert other memory lists to tensors ---
         old_log_probs_cpu = self.memory["log_probs_old"]
         if not all(isinstance(lp, torch.Tensor) for lp in old_log_probs_cpu):
-             old_log_probs = torch.tensor(old_log_probs_cpu, dtype=torch.float32).to(DEVICE)
+            old_log_probs = torch.tensor(old_log_probs_cpu, dtype=torch.float32).to(
+                DEVICE
+            )
         else:
-             old_log_probs = torch.stack(old_log_probs_cpu).to(DEVICE)
+            old_log_probs = torch.stack(old_log_probs_cpu).to(DEVICE)
 
         old_s_t_features = torch.stack(self.memory["s_t_features"]).to(DEVICE)
         old_all_s_prime_lists_cpu = self.memory["all_s_prime_features_lists"]
@@ -268,7 +289,11 @@ class PPOAgent(BaseAgent):
         num_samples = len(rewards)
         sample_indices = np.arange(num_samples)
 
-        actor_loss_epoch, critic_loss_epoch, entropy_epoch = 0,0,0 # For logging average over epochs
+        actor_loss_epoch, critic_loss_epoch, entropy_epoch = (
+            0,
+            0,
+            0,
+        )  # For logging average over epochs
 
         # --- 3. Perform PPO Update for K Epochs ---
         for k_epoch_num in range(self.ppo_epochs):
@@ -288,53 +313,62 @@ class PPOAgent(BaseAgent):
 
                 new_log_probs_list, entropy_list = [], []
                 valid_batch_item_count = 0
-                for i in range(len(batch_idx)): # Iterate over items in the minibatch
+                for i in range(len(batch_idx)):  # Iterate over items in the minibatch
                     s_prime_features_for_this_s_t_cpu_list = mb_all_s_prime_lists_cpu[i]
-                    
-                    if not s_prime_features_for_this_s_t_cpu_list: # If no S' were available for this S_t
+
+                    if (
+                        not s_prime_features_for_this_s_t_cpu_list
+                    ):  # If no S' were available for this S_t
                         # This case should ideally not contribute to loss or be handled carefully
                         # For now, we might skip this sample in the minibatch or assign a neutral log_prob.
                         # Let's assume select_action always provides some S' if game isn't over.
                         # If it can be empty, it means the state was terminal-like or stuck.
-                        continue # Skip this problematic sample
+                        continue  # Skip this problematic sample
 
-                    s_prime_features_batch_for_item = torch.stack(s_prime_features_for_this_s_t_cpu_list).to(DEVICE)
-                    
-                    action_scores = self.actor(s_prime_features_batch_for_item).squeeze(-1)
-                    
+                    s_prime_features_batch_for_item = torch.stack(
+                        s_prime_features_for_this_s_t_cpu_list
+                    ).to(DEVICE)
+
+                    action_scores = self.actor(s_prime_features_batch_for_item).squeeze(
+                        -1
+                    )
+
                     # Check for NaNs in scores
                     if torch.isnan(action_scores).any():
-                        print(f"Warning: NaN detected in action_scores for PPO update. Epoch {k_epoch_num}, Batch start {start}, Item index {i}")
-                        # Potentially skip this item or whole batch, or debug further
-                        # For now, let's allow it to proceed to see if Categorical handles it (it won't well)
-                        # This indicates a deeper numerical issue if it happens.
-                        # If we encounter this, we must stop and debug the actor or inputs.
-                        # To prevent crash, assign dummy values if nan, but this hides the problem
-                        # action_scores = torch.nan_to_num(action_scores, nan=0.0, posinf=1e5, neginf=-1e5)
-
+                        print(
+                            f"Warning: NaN detected in action_scores for PPO update. Epoch {k_epoch_num}, Batch start {start}, Item index {i}"
+                        )
 
                     dist = Categorical(logits=action_scores)
 
                     new_log_probs_list.append(dist.log_prob(mb_chosen_indices[i]))
                     entropy_list.append(dist.entropy())
-                    valid_batch_item_count +=1
-                
-                if valid_batch_item_count == 0: continue # Skip minibatch if all items were problematic
+                    valid_batch_item_count += 1
+
+                if valid_batch_item_count == 0:
+                    continue  # Skip minibatch if all items were problematic
 
                 new_log_probs = torch.stack(new_log_probs_list)
                 entropy = torch.stack(entropy_list).mean()
 
-                ratio = torch.exp(new_log_probs - mb_old_log_probs[:valid_batch_item_count]) # Slice mb_old_log_probs
-                
+                ratio = torch.exp(
+                    new_log_probs - mb_old_log_probs[:valid_batch_item_count]
+                )  # Slice mb_old_log_probs
+
                 # Slice advantages and returns to match valid items
                 mb_adv_valid = mb_advantages[:valid_batch_item_count]
                 mb_ret_valid = mb_returns[:valid_batch_item_count]
-                
+
                 surr1 = ratio * mb_adv_valid
-                surr2 = torch.clamp(ratio, 1.0 - self.ppo_clip, 1.0 + self.ppo_clip) * mb_adv_valid
+                surr2 = (
+                    torch.clamp(ratio, 1.0 - self.ppo_clip, 1.0 + self.ppo_clip)
+                    * mb_adv_valid
+                )
                 actor_loss = -torch.min(surr1, surr2).mean()
 
-                new_values = self.critic(mb_s_t[:valid_batch_item_count]).squeeze() # Slice S_t features
+                new_values = self.critic(
+                    mb_s_t[:valid_batch_item_count]
+                ).squeeze()  # Slice S_t features
                 critic_loss = F.mse_loss(new_values, mb_ret_valid)
 
                 total_loss = (
@@ -354,14 +388,17 @@ class PPOAgent(BaseAgent):
                 actor_loss_epoch += actor_loss.item()
                 critic_loss_epoch += critic_loss.item()
                 entropy_epoch += entropy.item()
-        
-        num_update_loops = self.ppo_epochs * (num_samples // self.batch_size + int(num_samples % self.batch_size != 0) )
-        if num_update_loops == 0: num_update_loops = 1 # Avoid division by zero
+
+        num_update_loops = self.ppo_epochs * (
+            num_samples // self.batch_size + int(num_samples % self.batch_size != 0)
+        )
+        if num_update_loops == 0:
+            num_update_loops = 1  # Avoid division by zero
 
         self.last_loss = {
             "actor": actor_loss_epoch / num_update_loops,
             "critic": critic_loss_epoch / num_update_loops,
-            "entropy": entropy_epoch / num_update_loops
+            "entropy": entropy_epoch / num_update_loops,
         }
         self.clear_memory()
 

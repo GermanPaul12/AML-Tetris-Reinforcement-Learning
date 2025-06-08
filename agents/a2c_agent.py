@@ -7,7 +7,7 @@ from torch.distributions import Categorical
 import random
 import os
 
-from src.tetris import Tetris  # For type hinting
+from src.tetris import Tetris
 import config as global_config
 from .base_agent import BaseAgent
 

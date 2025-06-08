@@ -4,6 +4,7 @@ import sys
 import os
 import config as tetris_config
 
+
 def get_operation_choice():
     print("\nWhat would you like to do?")
     operations = ["Train agents", "Test a trained agent", "Evaluate agents"]
@@ -160,7 +161,7 @@ def execute_script(command_list):
         if process.returncode != 0:
             print(f"\n--- Script exited with error (code: {process.returncode}) ---")
         else:
-            print(f"\n--- Script finished successfully ---")
+            print("\n--- Script finished successfully ---")
     except FileNotFoundError:
         print(
             f"Error: Could not find the script to execute. Command: {' '.join(command_list)}"

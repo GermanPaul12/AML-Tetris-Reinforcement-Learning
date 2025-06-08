@@ -5,9 +5,8 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import os
-import copy
-
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from src.tetris import Tetris

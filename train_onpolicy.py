@@ -2,10 +2,10 @@
 import argparse
 import os
 import random
-import re  # For parsing filenames
+import re
 import numpy as np
 import torch
-import time  # For printing frequency
+import time
 
 import config as tetris_config
 from agents import AGENT_REGISTRY
@@ -209,8 +209,8 @@ def train():
                 if isinstance(agent.last_loss, tuple) and len(agent.last_loss) == 2:
                     try:
                         loss_str = f"Loss (A/C): {float(agent.last_loss[0]):.4f}/{float(agent.last_loss[1]):.4f}"
-                    except:
-                        loss_str = "Loss (A/C): (err)"
+                    except Exception as e:
+                        loss_str = f"Loss (A/C): ({e})"
                 elif isinstance(agent.last_loss, dict):
                     parts = [
                         f"{k.capitalize()}:{float(v_loss):.4f}"
@@ -223,8 +223,8 @@ def train():
                 else:
                     try:
                         loss_str = f"Loss: {float(agent.last_loss):.4f}"
-                    except:
-                        loss_str = "Loss: (err)"
+                    except Exception as e:
+                        loss_str = f"Loss: ({e})"
 
             # --- Print periodic average score ---
             if games_since_last_print >= opt.print_every_games:
