@@ -292,8 +292,10 @@ def handle_testing():
     command = [sys.executable, os.path.join(tetris_config.PROJECT_ROOT, "test.py")]
     command.extend(["--agent_type", agent_type])
 
+    # Default value for num_games now comes from test.py's argparse (5)
+    # The config value can still be used for the prompt's text.
     num_games_str = input(
-        f"Enter number of games for video (default: {tetris_config.NUM_TEST_RUNS_GIF}): "
+        "Enter number of games to find the best run (default: 5): "
     ).strip()
     if num_games_str:
         try:
@@ -302,21 +304,15 @@ def handle_testing():
         except ValueError:
             print("Invalid number for games, using default.")
 
-    fps_str = input(f"Enter FPS for video (default: {tetris_config.GIF_FPS}): ").strip()
-    if fps_str:
-        try:
-            if int(fps_str) > 0:
-                command.extend(["--fps", fps_str])
-        except ValueError:
-            print("Invalid number for FPS, using default.")
+    # FPS argument is removed as it's no longer used by test.py
 
-    default_video_name = f"{agent_type}_test_video.mp4"
-    output_video = input(
-        f"Enter output video filename (default: {default_video_name}): "
+    default_gif_basename = f"{agent_type}_best_game"
+    output_gif_basename = input(
+        f"Enter output GIF base name (default: {default_gif_basename}): "
     ).strip()
-    if not output_video:
-        output_video = default_video_name
-    command.extend(["--output_video", output_video])
+    if not output_gif_basename:
+        output_gif_basename = default_gif_basename
+    command.extend(["--output_gif_basename", output_gif_basename])
 
     execute_script(command)
 

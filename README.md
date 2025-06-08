@@ -21,8 +21,8 @@ This project was developed as part of the **Artificial Machine Learning (AML) co
 
 | Name             | Student ID | Image                                                                                                 |
 | ---------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
-| German Paul      | 9973152    | ![German Paul](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/GP_Github.png)  |
-| Michael Greif    | [ID]  | ![Michael Greif](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/MG_Github.png)|
+| [German Paul](https://github.com/GermanPaul12)      | 9973152    | ![German Paul](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/GP_Github.png)  |
+| [Michael Greif](https://github.com/Greifenhard)    | [ID]  | ![Michael Greif](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/MG_Github.png)|
 
 ## Getting Started
 
