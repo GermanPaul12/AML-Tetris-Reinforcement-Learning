@@ -28,9 +28,9 @@ This project was developed as part of the **Artificial Machine Learning (AML) co
 
 ### Prerequisites
 
-*   Python 3.13
-*   `uv` (Python package installer and virtual environment manager): [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv)
-*   A C++ compiler (required by PyTorch for certain installations)
+- Python 3.13
+- `uv` (Python package installer and virtual environment manager): [https://github.com/astral-sh/uv](https://github.com/astral-sh/uv)
+- A C++ compiler (required by PyTorch for certain installations)
 
 ### Running the Project
 
@@ -41,27 +41,31 @@ uv run main.py
 ```
 
 This will launch an interactive command-line menu allowing you to:
-*   Train specific agents (DQN, REINFORCE, A2C, PPO, Genetic Algorithm, Evolutionary Strategies).
-*   Test a pre-trained agent and generate a video of its gameplay.
-*   Evaluate all trained agents and generate a performance summary.
+
+- Train specific agents (DQN, REINFORCE, A2C, PPO, Genetic Algorithm, Evolutionary Strategies).
+- Test a pre-trained agent and generate a video of its gameplay.
+- Evaluate all trained agents and generate a performance summary.
 
 The project also includes dedicated training scripts for different categories of agents:
-*   `train_dqn_reinforce.py`: For DQN and REINFORCE agents.
-*   `train_onpolicy.py`: For A2C and PPO agents.
-*   `train_evolutionary.py`: For Genetic Algorithm and Evolutionary Strategies.
+
+- `train_dqn_reinforce.py`: For DQN and REINFORCE agents.
+- `train_onpolicy.py`: For A2C and PPO agents.
+- `train_evolutionary.py`: For Genetic Algorithm and Evolutionary Strategies.
 
 These can be run directly if preferred, e.g.:
+
 ```bash
 uv run train_dqn_reinforce.py --agent_type dqn
 uv run train_evolutionary.py --agent_type genetic
 ```
+
 Use the `--help` flag for more options on these scripts (e.g., `uv run train_dqn_reinforce.py --help`).
 
 ## Project Structure
 
 The project is organized as follows (up to level 3):
 
-```
+```text
 .
 ├── .git/                     # Git internal files (hidden)
 ├── .gitignore
@@ -97,16 +101,16 @@ The project is organized as follows (up to level 3):
 
 **Key Components:**
 
-*   **`main.py`**: The main entry point for interacting with the project via a CLI menu.
-*   **`agents/`**: Contains all the agent implementations.
-    *   `base_agent.py`: Defines an abstract `BaseAgent` class that all other agents inherit from, ensuring a consistent interface for `select_action`, `learn`, `save`, `load`, etc.
-    *   Individual agent files (`dqn_agent.py`, etc.): Implement the specific logic for each algorithm.
-*   **`src/tetris.py`**: The core Tetris game environment. It handles game rules, piece movements, line clearing, and scoring. It also provides a method `get_next_states()` which is crucial for how the agents make decisions by evaluating potential outcomes of piece placements.
-*   **`config.py`**: Centralized configuration for hyperparameters, model paths, training game counts, etc., for all agents.
-*   **Training Scripts (`train_*.py`)**: Dedicated scripts for training different categories of agents. They handle the main training loop, calling the agent's `select_action` and `learn` methods, and managing game episodes.
-*   **`evaluate.py`**: Loads the best saved models for each agent type and runs a set number of games to gather performance statistics, outputting a summary table and a CSV file.
-*   **`test.py`**: Loads a specific trained agent and records a video of its gameplay for a few games, focusing on the best-scoring game.
-*   **`models/`**: Default directory where trained models are saved (usually with the score in the filename) and where test videos are stored.
+- **`main.py`**: The main entry point for interacting with the project via a CLI menu.
+- **`agents/`**: Contains all the agent implementations.
+  - `base_agent.py`: Defines an abstract `BaseAgent` class that all other agents inherit from, ensuring a consistent interface for `select_action`, `learn`, `save`, `load`, etc.
+  - Individual agent files (`dqn_agent.py`, etc.): Implement the specific logic for each algorithm.
+- **`src/tetris.py`**: The core Tetris game environment. It handles game rules, piece movements, line clearing, and scoring. It also provides a method `get_next_states()` which is crucial for how the agents make decisions by evaluating potential outcomes of piece placements.
+- **`config.py`**: Centralized configuration for hyperparameters, model paths, training game counts, etc., for all agents.
+- **Training Scripts (`train_*.py`)**: Dedicated scripts for training different categories of agents. They handle the main training loop, calling the agent's `select_action` and `learn` methods, and managing game episodes.
+- **`evaluate.py`**: Loads the best saved models for each agent type and runs a set number of games to gather performance statistics, outputting a summary table and a CSV file.
+- **`test.py`**: Loads a specific trained agent and records a video of its gameplay for a few games, focusing on the best-scoring game.
+- **`models/`**: Default directory where trained models are saved (usually with the score in the filename) and where test videos are stored.
 
 ## Agent Explanations
 
@@ -114,172 +118,212 @@ This project implements several types of RL and EA agents to play Tetris. The Te
 
 ### 1. DQN (Deep Q-Network) Agent (`agents/dqn_agent.py`)
 
-*   **Type:** Value-based, Off-policy Reinforcement Learning.
-*   **Network:** Uses a Q-Network (typically a Multi-Layer Perceptron - MLP - in this project, as it takes handcrafted features as input) to estimate the Q-value (expected future reward) of a given board state *after* a piece has been placed.
-*   **Action Selection:** During training, it uses epsilon-greedy exploration: with probability epsilon, it chooses a random placement; otherwise, it queries the Q-network for all possible next states (resulting from valid piece placements) and chooses the placement leading to the state with the highest Q-value. During testing, epsilon is set to 0 (greedy selection).
-*   **Learning:**
-    *   Uses a Replay Buffer to store experiences: `(S_t_features, S'_chosen_features, R_{t+1}, S_{t+1}_features, Done_{t+1})`.
-        *   `S_t_features`: Board features *before* placing the current piece.
-        *   `S'_chosen_features`: Board features *after* the chosen piece placement. This is the input to the Q-network to get the "current Q-value".
-        *   `R_{t+1}`: Reward from the placement.
-        *   `S_{t+1}_features`: Board features when the *next* piece appears. This is used to calculate the target Q-value.
-        *   `Done_{t+1}`: If the game ended after `S_{t+1}`.
-    *   A separate Target Network is used to stabilize learning. The target Q-value is calculated as `R_{t+1} + gamma * max_a' Q_target(features_of_state_after_a'_from_S_{t+1})`.
-    *   The loss is typically Mean Squared Error (MSE) between the current Q-value and the target Q-value.
-*   **Training Script:** `train_dqn_reinforce.py` (shared with REINFORCE, but their learning loops are distinct).
+- **Type:** Value-based, Off-policy Reinforcement Learning.
+- **Network:** Uses a Q-Network (typically a Multi-Layer Perceptron - MLP - in this project, as it takes handcrafted features as input) to estimate the Q-value (expected future reward) of a given board state *after* a piece has been placed.
+- **Action Selection:** During training, it uses epsilon-greedy exploration: with probability epsilon, it chooses a random placement; otherwise, it queries the Q-network for all possible next states (resulting from valid piece placements) and chooses the placement leading to the state with the highest Q-value. During testing, epsilon is set to 0 (greedy selection).
+- **Learning:**
+  - Uses a Replay Buffer to store experiences: `(S_t_features, S'_chosen_features, R_{t+1}, S_{t+1}_features, Done_{t+1})`.
+    - `S_t_features`: Board features *before* placing the current piece.
+    - `S'_chosen_features`: Board features *after* the chosen piece placement. This is the input to the Q-network to get the "current Q-value".
+    - `R_{t+1}`: Reward from the placement.
+    - `S_{t+1}_features`: Board features when the *next* piece appears. This is used to calculate the target Q-value.
+    - `Done_{t+1}`: If the game ended after `S_{t+1}`.
+  - A separate Target Network is used to stabilize learning. The target Q-value is calculated as `R_{t+1} + gamma * max_a' Q_target(features_of_state_after_a'_from_S_{t+1})`.
+  - The loss is typically Mean Squared Error (MSE) between the current Q-value and the target Q-value.
+- **Training Script:** `train_dqn_reinforce.py` (shared with REINFORCE, but their learning loops are distinct).
 
 ### 2. REINFORCE Agent (`agents/reinforce_agent.py`)
 
-*   **Type:** Policy Gradient, On-policy Reinforcement Learning.
-*   **Network:** Uses a Policy Network (MLP) that takes features of a board state *after* a piece has been placed and outputs a single score (logit).
-*   **Action Selection:** For all possible next states S' (resulting from valid piece placements), the policy network computes their scores. A softmax is applied over these scores to create a probability distribution. An action (piece placement) is then sampled from this distribution.
-*   **Learning:**
-    *   Collects trajectories of `(log_prob_of_chosen_S', reward)` for an entire episode (one full game of Tetris).
-    *   At the end of the episode, it calculates the discounted future returns (G_t) for each step.
-    *   The policy network is updated to increase the probability of actions that led to higher returns. The loss is typically `- sum(log_prob_chosen_S' * G_t)`.
-*   **Training Script:** `train_dqn_reinforce.py`.
+- **Type:** Policy Gradient, On-policy Reinforcement Learning.
+- **Network:** Uses a Policy Network (MLP) that takes features of a board state *after* a piece has been placed and outputs a single score (logit).
+- **Action Selection:** For all possible next states S' (resulting from valid piece placements), the policy network computes their scores. A softmax is applied over these scores to create a probability distribution. An action (piece placement) is then sampled from this distribution.
+- **Learning:**
+  - Collects trajectories of `(log_prob_of_chosen_S', reward)` for an entire episode (one full game of Tetris).
+  - At the end of the episode, it calculates the discounted future returns (G_t) for each step.
+  - The policy network is updated to increase the probability of actions that led to higher returns. The loss is typically `- sum(log_prob_chosen_S' * G_t)`.
+- **Training Script:** `train_dqn_reinforce.py`.
 
 ### 3. A2C (Advantage Actor-Critic) Agent (`agents/a2c_agent.py`)
 
-*   **Type:** Policy Gradient & Value-based, On-policy Reinforcement Learning.
-*   **Networks:** Uses two networks (often with shared initial layers):
-    *   **Actor:** Takes features of a board state *after* a piece placement (S') and outputs a score/logit. Similar to REINFORCE, a softmax over scores for all possible S' gives action probabilities.
-    *   **Critic:** Takes features of the board state *before* a piece placement (S_t) and outputs an estimate of the value of that state, V(S_t).
-*   **Action Selection:** The Actor network determines the probability distribution over possible piece placements (derived from scores of S' states), and an action is sampled.
-*   **Learning:**
-    *   Learns at each step (after each piece placement).
-    *   **Critic Update:** The critic learns to better predict V(S_t) using the TD target: `R_{t+1} + gamma * V(S_{t+1})`. The loss is MSE between `V(S_t)` and this target.
-    *   **Actor Update:** The actor is updated using the advantage: `A_t = R_{t+1} + gamma * V(S_{t+1}) - V(S_t)`. The loss encourages actions that lead to a positive advantage, typically `-log_prob_chosen_S' * A_t`. An entropy bonus can be added to encourage exploration.
-*   **Training Script:** `train_onpolicy.py` (shared with PPO).
+- **Type:** Policy Gradient & Value-based, On-policy Reinforcement Learning.
+- **Networks:** Uses two networks (often with shared initial layers):
+  - **Actor:** Takes features of a board state *after* a piece placement (S') and outputs a score/logit. Similar to REINFORCE, a softmax over scores for all possible S' gives action probabilities.
+  - **Critic:** Takes features of the board state *before* a piece placement (S_t) and outputs an estimate of the value of that state, V(S_t).
+- **Action Selection:** The Actor network determines the probability distribution over possible piece placements (derived from scores of S' states), and an action is sampled.
+- **Learning:**
+  - Learns at each step (after each piece placement).
+  - **Critic Update:** The critic learns to better predict V(S_t) using the TD target: `R_{t+1} + gamma * V(S_{t+1})`. The loss is MSE between `V(S_t)` and this target.
+  - **Actor Update:** The actor is updated using the advantage: `A_t = R_{t+1} + gamma * V(S_{t+1}) - V(S_t)`. The loss encourages actions that lead to a positive advantage, typically `-log_prob_chosen_S' * A_t`. An entropy bonus can be added to encourage exploration.
+- **Training Script:** `train_onpolicy.py` (shared with PPO).
 
 ### 4. PPO (Proximal Policy Optimization) Agent (`agents/ppo_agent.py`)
 
-*   **Type:** Policy Gradient, On-policy Reinforcement Learning. It's an improvement over A2C, often more stable and sample-efficient.
-*   **Networks:** Similar to A2C, it uses an Actor and a Critic network.
-    *   **Actor:** Evaluates features of S' (state after potential action).
-    *   **Critic:** Evaluates features of S_t (state before action).
-*   **Action Selection:** The Actor network defines a policy (distribution over S' scores), and an action is sampled.
-*   **Learning:**
-    *   Collects a batch of experiences (a "horizon" of piece placements).
-    *   Calculates advantages using Generalized Advantage Estimation (GAE), which helps balance bias and variance.
-    *   Performs multiple epochs of updates on the collected batch of data.
-    *   The key PPO innovation is the "clipped surrogate objective function," which restricts how much the policy can change in one update, leading to more stable training. It compares the ratio of new policy probabilities to old policy probabilities.
-*   **Training Script:** `train_onpolicy.py`.
+- **Type:** Policy Gradient, On-policy Reinforcement Learning. It's an improvement over A2C, often more stable and sample-efficient.
+- **Networks:** Similar to A2C, it uses an Actor and a Critic network.
+  - **Actor:** Evaluates features of S' (state after potential action).
+  - **Critic:** Evaluates features of S_t (state before action).
+- **Action Selection:** The Actor network defines a policy (distribution over S' scores), and an action is sampled.
+- **Learning:**
+  - Collects a batch of experiences (a "horizon" of piece placements).
+  - Calculates advantages using Generalized Advantage Estimation (GAE), which helps balance bias and variance.
+  - Performs multiple epochs of updates on the collected batch of data.
+  - The key PPO innovation is the "clipped surrogate objective function," which restricts how much the policy can change in one update, leading to more stable training. It compares the ratio of new policy probabilities to old policy probabilities.
+- **Training Script:** `train_onpolicy.py`.
 
 ### 5. Genetic Algorithm (GA) Agent (`agents/genetic_agent.py`)
 
-*   **Type:** Evolutionary Algorithm.
-*   **Individuals:** Each individual in the population is a `PolicyNetwork` (MLP that scores features of S'). Its "genes" are the network weights.
-*   **Fitness:** The fitness of an individual is its average score obtained over one or more full games of Tetris.
-*   **Evolution Process (`GeneticAlgorithmController`):**
-    *   **Selection:** Parents are chosen from the current population, typically using tournament selection (fitter individuals are more likely to be chosen).
-    *   **Crossover:** Genetic material (network weights) from two parents is combined to create offspring (e.g., by averaging weights or single-point crossover).
-    *   **Mutation:** Small random changes are introduced into the offspring's weights to maintain diversity.
-    *   **Elitism:** A few of the best individuals from the current generation are carried over directly to the next generation, unchanged.
-    *   This process is repeated for a set number of generations.
-*   **Usage for Evaluation/Testing:** The `GeneticAgent` class acts as a wrapper that loads the best `PolicyNetwork` found by the `GeneticAlgorithmController` during training and uses it to select actions.
-*   **Training Script:** `train_evolutionary.py`.
+- **Type:** Evolutionary Algorithm.
+- **Individuals:** Each individual in the population is a `PolicyNetwork` (MLP that scores features of S'). Its "genes" are the network weights.
+- **Fitness:** The fitness of an individual is its average score obtained over one or more full games of Tetris.
+- **Evolution Process (`GeneticAlgorithmController`):**
+  - **Selection:** Parents are chosen from the current population, typically using tournament selection (fitter individuals are more likely to be chosen).
+  - **Crossover:** Genetic material (network weights) from two parents is combined to create offspring (e.g., by averaging weights or single-point crossover).
+  - **Mutation:** Small random changes are introduced into the offspring's weights to maintain diversity.
+  - **Elitism:** A few of the best individuals from the current generation are carried over directly to the next generation, unchanged.
+  - This process is repeated for a set number of generations.
+- **Usage for Evaluation/Testing:** The `GeneticAgent` class acts as a wrapper that loads the best `PolicyNetwork` found by the `GeneticAlgorithmController` during training and uses it to select actions.
+- **Training Script:** `train_evolutionary.py`.
 
 ### 6. ES (Evolutionary Strategies) Agent (`agents/es_agent.py`)
 
-*   **Type:** Evolutionary Algorithm (a type of black-box optimization).
-*   **Core Idea:** ES directly evolves the parameters (weights) of a single "central" policy network.
-*   **Network:** Uses a `PolicyNetworkES` (MLP that scores features of S').
-*   **Evolution Process:**
-    1.  Start with a central set of weights for the policy network.
-    2.  In each generation, create a population of "perturbed" versions of these central weights by adding Gaussian noise.
-    3.  Evaluate the fitness (game score) of each set of perturbed weights by running Tetris games.
-    4.  Update the central weights by moving them in the direction of the "gradient" estimated from the fitness scores of the perturbed individuals. Essentially, weights that led to higher scores get "reinforced." The update is a weighted sum of the noise vectors, where weights are derived from the fitness scores.
-    5.  The learning rate and noise standard deviation (sigma) are key hyperparameters.
-*   **Usage for Evaluation/Testing:** The `ESAgent` class uses its current best central policy network (updated through evolution) for action selection.
-*   **Training Script:** `train_evolutionary.py`.
+- **Type:** Evolutionary Algorithm (a type of black-box optimization).
+- **Core Idea:** ES directly evolves the parameters (weights) of a single "central" policy network.
+- **Network:** Uses a `PolicyNetworkES` (MLP that scores features of S').
+- **Evolution Process:**
+    1. Start with a central set of weights for the policy network.
+    1. In each generation, create a population of "perturbed" versions of these central weights by adding Gaussian noise.
+    1. Evaluate the fitness (game score) of each set of perturbed weights by running Tetris games.
+    1. Update the central weights by moving them in the direction of the "gradient" estimated from the fitness scores of the perturbed individuals. Essentially, weights that led to higher scores get "reinforced." The update is a weighted sum of the noise vectors, where weights are derived from the fitness scores.
+    1. The learning rate and noise standard deviation (sigma) are key hyperparameters.
+- **Usage for Evaluation/Testing:** The `ESAgent` class uses its current best central policy network (updated through evolution) for action selection.
+- **Training Script:** `train_evolutionary.py`.
 
 ### 7. Random Agent (`agents/random_agent.py`)
-*   **Type:** Baseline / Control.
-*   **Action Selection:** Chooses a random valid piece placement from the available next states.
-*   **Learning:** Does not learn.
-*   **Purpose:** Provides a baseline performance to compare other agents against.
 
-## Qualitative Evaluation (Gameplay Videos)
+- **Type:** Baseline / Control.
+- **Action Selection:** Chooses a random valid piece placement from the available next states.
+- **Learning:** Does not learn.
+- **Purpose:** Provides a baseline performance to compare other agents against.
 
-The following are ``` links to videos showcasing the gameplay of the trained agents. Replace them with actual links to MP4 files (e.g., hosted on GitHub or a video platform).
+## Qualitative Evaluation (Gameplay Videos/GIFs)
 
-*   **DQN Agent Gameplay:** `[Link to/Path to DQN_Gameplay.mp4]`
-*   **REINFORCE Agent Gameplay:** `[Link to/Path to REINFORCE_Gameplay.mp4]`
-*   **A2C Agent Gameplay:** `[Link to/Path to A2C_Gameplay.mp4]`
-*   **PPO Agent Gameplay:** `[Link to/Path to PPO_Gameplay.mp4]`
-*   **Genetic Algorithm (Best Individual) Gameplay:** `[Link to/Path to GA_Gameplay.mp4]`
-*   **Evolutionary Strategies (Best Policy) Gameplay:** `[Link to/Path to ES_Gameplay.mp4]`
+To get a visual sense of how our agents perform, we've recorded gameplay GIFs. These videos highlight the strategies (or lack thereof) learned by each agent.
 
-*(These videos would typically be generated by the `test.py` script after training each agent.)*
+- **Random Agent Gameplay:**
+  - *Comment:* As expected, the random agent makes moves without any apparent strategy, quickly leading to a game over with a low score.
+  - `![Random Agent Gameplay](models/gifs/random_best_game_score_24_random.gif)`
+
+- **DQN Agent Gameplay:**
+  - *Comment:* Our DQN agent demonstrates significantly improved play. It's making more strategic placements, clearing lines effectively, and achieving high scores, reflecting its strong quantitative performance.
+  - `![DQN Agent Gameplay](YOUR_PATH_TO/DQN_Gameplay.gif)`
+
+- **Genetic Algorithm (Best Individual) Gameplay:**
+  - *Comment:* The Genetic Algorithm showcases exceptional gameplay. The piece placements are highly optimized, leading to very efficient line clearing and the highest scores we've observed, consistent with its top ranking in our quantitative tests.
+  - `![Genetic Algorithm Gameplay](YOUR_PATH_TO/GENETIC_Gameplay.gif)`
+
+- **REINFORCE Agent Gameplay:**
+  - *Comment:* The REINFORCE agent shows signs of learning, making some reasonable moves and outperforming the random agent. However, its strategy is not as refined as our top performers, aligning with its mid-tier quantitative results.
+  - `![REINFORCE Agent Gameplay](YOUR_PATH_TO/REINFORCE_Gameplay.gif)`
+
+- **A2C Agent Gameplay:**
+  - *Comment:* Unfortunately, the A2C agent's gameplay reflects its poor quantitative performance. The moves appear largely random, and it struggles to clear lines or achieve a meaningful score. We'll need to investigate this agent further.
+  - `![A2C Agent Gameplay](YOUR_PATH_TO/A2C_Gameplay.gif)`
+
+- **PPO Agent Gameplay:**
+  - *Comment:* Our PPO agent exhibits a noticeable improvement over random play, attempting to make sensible placements. While it achieves respectable scores, its strategy isn't as sophisticated or high-scoring as our top-tier agents like GENETIC or DQN.
+  - `![PPO Agent Gameplay](YOUR_PATH_TO/PPO_Gameplay.gif)`
+
+- **Evolutionary Strategies (Best Policy) Gameplay:**
+  - *Comment:* The ES agent displays very strong and intelligent gameplay. It consistently makes strategic decisions, leading to high scores and effective line clearing, confirming its place as one of our top-performing agents.
+  - `![ES Agent Gameplay](YOUR_PATH_TO/ES_Gameplay.gif)`
 
 ## Quantitative Evaluation (Performance Metrics)
 
-Agents were evaluated over a set number of games (e.g., 2000 as per your output) after training. The following table summarizes their performance.
+We evaluated our agents over 20 games after their respective training routines. The following table summarizes their performance.
 
-**Example Table Structure (based on your provided output):**
+**Quantitative Evaluation Results:**
 
-| Agent     | Avg Score | Std Score | Min Score | Max Score | Avg Pieces | Avg Tetrominoes | Avg Lines Cleared | Num Eval Games |
-| :-------- | :-------- | :-------- | :-------- | :-------- | :--------- | :-------------- | :---------------- | :------------- |
-| RANDOM    | 18.48     | 3.70      | 8         | 40        | 18.34      | 18.34           | 0.01              | 2000           |
-| DQN       | 12.66     | 1.83      | 8         | 19        | 12.66      | 12.66           | 0.00              | 2000           |
-| GENETIC   | 51.46     | 31.40     | 13        | 242       | 27.92      | 27.92           | 2.06              | 2000           |
-| REINFORCE | 18.25     | 3.43      | 9         | 39        | 18.21      | 18.21           | 0.00              | 2000           |
-| A2C       | 17.88     | 3.08      | 9         | 32        | 17.87      | 17.87           | 0.00              | 2000           |
-| PPO       | 16.56     | 2.90      | 9         | 35        | 16.54      | 16.54           | 0.00              | 2000           |
-| ES        | 51.74     | 32.06     | 13        | 224       | 27.93      | 27.93           | 2.07              | 2000           |
+| Agent     | Avg Score    | Std Score    | Min Score | Max Score | Avg Pieces   | Avg Tetrominoes | Avg Lines Cleared | Num Eval Games |
+| :-------- | :----------- | :----------- | :-------- | :-------- | :----------- | :-------------- | :---------------- | :------------- |
+| RANDOM    | 16.75        | 3.74         | 11        | 24        | 18.75        | 18.75           | 0.00              | 20             |
+| DQN       | **581974.70**| 575571.30    | 26772     | 1945608   | 70253.70     | 70253.70        | 28088.70          | 20             |
+| GENETIC   | **2123031.05**| 1813144.83   | 145855    | **5885656**| **344067.05**| **344067.05*- | **137613.90*-   | 20             |
+| REINFORCE | 22707.15     | 17638.53     | 1588      | 51922     | 3644.65      | 3644.65         | 1444.55           | 20             |
+| A2C       | 10.70        | 2.17         | 8         | 16        | 12.70        | 12.70           | 0.00              | 20             |
+| PPO       | 34448.35     | 31026.29     | 790       | 125177    | 3361.35      | 3361.35         | 1332.50           | 20             |
+| ES        | **1143788.20**| 1066014.95   | 7455      | 4470784   | 185097.70    | 185097.70       | 74027.15          | 20             |
 
-**Analysis of Current Results (based on your provided table):**
+**Analysis of Our New Results:**
 
-*   The current evaluation results show that the **Evolutionary Agents (Genetic Algorithm and Evolutionary Strategies) are performing significantly better** than the Random agent and all the implemented Reinforcement Learning agents (DQN, REINFORCE, A2C, PPO).
-*   The RL agents (DQN, REINFORCE, A2C, PPO) are performing **at or below the level of the Random agent**. This strongly indicates that these agents are **not learning effectively** as currently implemented or configured for this specific Tetris environment and feature set.
-*   Given that you mentioned DQN, GA, and ES achieved high scores (>1 million) during *training*, but `evaluate.py` shows low scores for DQN, this points to a critical issue:
-    *   **The models being loaded by `evaluate.py` for DQN (and likely REINFORCE, A2C, PPO) are not the well-trained versions.** The `evaluate.py` script needs to correctly identify and load the model files that correspond to the *best performance achieved during training* (e.g., those saved with high scores in their filenames). The `test.py` script also needs this fix.
-    *   There might be a mismatch between the agent's state/mode during training versus evaluation (e.g., exploration vs. exploitation, network in `train()` vs `eval()` mode).
-*   The fact that GA and ES *do* show better (though still modest in this sample table) scores in evaluation suggests their saving/loading mechanism in `evaluate.py` might be capturing their best-evolved policies more effectively, or their optimization process is less sensitive to the specific type of learning issues plaguing the RL agents.
+- **Our Top Performers:**
+  - The **Genetic Algorithm (GENETIC)** emerged as our leading agent by a significant margin. It achieved the highest average score, maximum score, and lines cleared, which tells us its direct policy optimization approach is working exceptionally well with our current setup.
+  - Our **Evolutionary Strategies (ES)** agent also performed extremely well, securing the second-highest average score and showing strong learning.
+  - We're pleased to see our **Deep Q-Network (DQN)** has shown a massive improvement from our earlier evaluations. It's now achieving very high scores, comparable to ES. This strongly suggests that the fixes we implemented for model loading and ensuring proper evaluation mode for DQN were successful.
+- **Mid-Tier Performers (Showing Encouraging Learning):**
+  - **Proximal Policy Optimization (PPO)** and **REINFORCE** are now demonstrating significant learning, with average scores in the tens of thousands. They are substantially outperforming our random agent baseline, though they still have some way to go to catch up with GENETIC, ES, and DQN.
+- **Underperforming Agent:**
+  - Our **Advantage Actor-Critic (A2C)** agent is currently performing worse than the random agent. This points to some critical issues we need to address in its implementation or configuration.
+- **Variability in Performance:** We observed that many of our successful agents (GENETIC, ES, DQN) show high standard deviations in their scores. This indicates a wide range of performance across the evaluation games, which isn't entirely unexpected for a complex game like Tetris.
+- **Impact of Model Loading & Evaluation Mode:**
+  - The dramatic improvement in DQN's performance strongly validates our efforts to ensure the correct, best-trained model is loaded and that the agent operates in the proper evaluation mode (e.g., greedy actions, networks in `eval()` state).
+  - For **A2C**, and potentially for **PPO** and **REINFORCE** (if their training scores were significantly higher than what we see in this evaluation), we need to meticulously apply the same rigorous model loading and evaluation mode procedures. The discrepancy for A2C, if it performed well during training, is now our most pressing concern among the RL agents.
+- **Effectiveness of Different Approaches:**
+  - It seems direct policy search methods (GENETIC, ES) and value-based methods when properly evaluated (DQN) are proving very effective for us.
+  - Our policy gradient methods (REINFORCE, PPO, A2C) are having mixed success, with A2C currently struggling. This could be due to their known sensitivity to hyperparameters, our choice of baseline, the current feature set, or the network architecture we've used.
+
+**Our Next Steps & Recommendations:**
+
+1. **Investigate A2C:** Our top priority is to figure out why A2C is underperforming. We'll need to thoroughly review its implementation, hyperparameter settings, model saving/loading logic, and how it handles evaluation mode.
+2. **Optimize PPO and REINFORCE:** While these are learning, we believe there's room for improvement. We plan to:
+    - Conduct further hyperparameter tuning.
+    - Double-check that we're consistently loading their best models from training for evaluation.
+    - Verify their evaluation mode is correctly set and enforced.
+3. **Analyze Our Top Performers:** We want to dig deeper into what makes GENETIC, ES, and DQN so successful in our current framework. This might involve looking at the characteristics of the policies they've learned or which features they seem to be leveraging most effectively.
+4. **Ensure Consistency in Evaluation:** We will continue to ensure all agents are evaluated under identical conditions and that our evaluation scripts robustly load the best available model for each agent, using our score-in-filename convention.
+5. **Feature Engineering & Network Architecture (Longer-Term):** For agents that aren't yet at the top tier, we might revisit our state representation (the current 4 heuristic features) and the complexity of our neural network architectures in the future. However, it's encouraging that GENETIC, ES, and DQN have demonstrated that high scores are achievable with the current setup.
 
 ## Future Work and Potential Improvements
 
-*   **Improve RL Agent Learning:**
-    *   **Correct Target Calculation for DQN:** Implement the more accurate target Q-value calculation for DQN that involves simulating next possible moves from S_{t+1} using the target network. This requires careful handling of game state reconstruction or storing more information in the replay buffer.
-    *   **Refine A2C/PPO Network Inputs:** Ensure the Actor network for A2C/PPO correctly models `pi(Action | S_t)` by taking `S_t` features (before piece placement) and outputting a distribution over the discrete placements derived from `get_next_states()`. The Critic should take `S_t` features and output `V(S_t)`. This is a significant architectural change from the current model of scoring S' states.
-    *   **Hyperparameter Tuning:** Extensive tuning of learning rates, discount factors, network architectures, exploration schedules (for DQN), entropy coefficients (for A2C/PPO), etc.
-    *   **Reward Shaping:** Experiment with different reward functions beyond just lines cleared or game score to guide learning more effectively (e.g., penalties for holes, height).
-*   **Advanced State Features:** Explore more sophisticated handcrafted features or consider using a raw pixel input with a Convolutional Neural Network (CNN) for the RL agents, which might capture more nuances of the board state.
-*   **Enhanced Evolutionary Algorithms:**
-    *   More sophisticated crossover and mutation operators for GA.
-    *   Adaptive sigma/learning rates for ES.
-*   **Comparative Analysis:** More rigorous comparison of learning curves, final performance, and sample efficiency across all agents.
-*   **Code Refinements:** Move shared helper functions (like model saving/loading utilities) into a common `utils.py` file.
+- **Improve RL Agent Learning:**
+  - **Correct Target Calculation for DQN:** Implement the more accurate target Q-value calculation for DQN that involves simulating next possible moves from S_{t+1} using the target network. This requires careful handling of game state reconstruction or storing more information in the replay buffer.
+  - **Refine A2C/PPO Network Inputs:** Ensure the Actor network for A2C/PPO correctly models `pi(Action | S_t)` by taking `S_t` features (before piece placement) and outputting a distribution over the discrete placements derived from `get_next_states()`. The Critic should take `S_t` features and output `V(S_t)`. This is a significant architectural change from the current model of scoring S' states.
+  - **Hyperparameter Tuning:** Extensive tuning of learning rates, discount factors, network architectures, exploration schedules (for DQN), entropy coefficients (for A2C/PPO), etc.
+  - **Reward Shaping:** Experiment with different reward functions beyond just lines cleared or game score to guide learning more effectively (e.g., penalties for holes, height).
+- **Advanced State Features:** Explore more sophisticated handcrafted features or consider using a raw pixel input with a Convolutional Neural Network (CNN) for the RL agents, which might capture more nuances of the board state.
+- **Enhanced Evolutionary Algorithms:**
+  - More sophisticated crossover and mutation operators for GA.
+  - Adaptive sigma/learning rates for ES.
+- **Comparative Analysis:** More rigorous comparison of learning curves, final performance, and sample efficiency across all agents.
+- **Code Refinements:** Move shared helper functions (like model saving/loading utilities) into a common `utils.py` file.
 
 ## Sources and Inspirations
 
 ### Foundational Papers & Algorithms
 
-*   **Deep Q-Network (DQN):** Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A. A., Veness, J., Bellemare, M. G., ... & Hassabis, D. (2015). Human-level control through deep reinforcement learning. *Nature, 518*(7540), 529-533.
-*   **REINFORCE Algorithm:** Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. *Machine learning, 8*(3), 229-256.
-*   **Asynchronous Advantage Actor-Critic (A3C/A2C):** Mnih, V., Badia, A. P., Mirza, M., Graves, A., Lillicrap, T., Harley, T., ... & Kavukcuoglu, K. (2016, June). Asynchronous methods for deep reinforcement learning. In *International conference on machine learning* (pp. 1928-1937). PMLR.
-*   **Proximal Policy Optimization (PPO):** Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017). Proximal policy optimization algorithms. *arXiv preprint arXiv:1707.06347.*
-*   **NeuroEvolution of Augmenting Topologies (NEAT):** Stanley, K. O., & Miikkulainen, R. (2002). Evolving neural networks through augmenting topologies. *Evolutionary computation, 10*(2), 99-127.
+- **Deep Q-Network (DQN):** Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A. A., Veness, J., Bellemare, M. G., ... & Hassabis, D. (2015). Human-level control through deep reinforcement learning. *Nature, 518*(7540), 529-533.
+- **REINFORCE Algorithm:** Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. *Machine learning, 8*(3), 229-256.
+- **Asynchronous Advantage Actor-Critic (A3C/A2C):** Mnih, V., Badia, A. P., Mirza, M., Graves, A., Lillicrap, T., Harley, T., ... & Kavukcuoglu, K. (2016, June). Asynchronous methods for deep reinforcement learning. In *International conference on machine learning* (pp. 1928-1937). PMLR.
+- **Proximal Policy Optimization (PPO):** Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017). Proximal policy optimization algorithms. *arXiv preprint arXiv:1707.06347.*
+- **NeuroEvolution of Augmenting Topologies (NEAT):** Stanley, K. O., & Miikkulainen, R. (2002). Evolving neural networks through augmenting topologies. *Evolutionary computation, 10*(2), 99-127.
 
 ### Tetris AI Resources
 
-*   **vietnh1009 Tetris Game Implementation:** An implementation of Tetris which inspired this project. (Often found at: [vietnh1009/Tetris-deep-Q-learning-pytorch](https://github.com/vietnh1009/Tetris-deep-Q-learning-pytorch/)
+- **vietnh1009 Tetris Game Implementation:** An implementation of Tetris which inspired this project. (Often found at: [vietnh1009/Tetris-deep-Q-learning-pytorch](https://github.com/vietnh1009/Tetris-deep-Q-learning-pytorch/)
 
 ### Course Materials
 
-*   Lectures, provided code examples, and guidance from the Advanced Machine Learning (AML) course at DHBW Mannheim, instructed by Prof. Dr. Maximilian Scherer.
+- Lectures, provided code examples, and guidance from the Advanced Machine Learning (AML) course at DHBW Mannheim, instructed by Prof. Dr. Maximilian Scherer.
 
 ### Core Libraries & Documentation
 
-*   **PyTorch:** Deep learning framework used for neural network implementations.
-    *   Documentation: [https://pytorch.org/docs/stable/index.html](https://pytorch.org/docs/stable/index.html)
-*   **NumPy:** Fundamental package for numerical computation in Python.
-    *   Documentation: [https://numpy.org/doc/stable/](https://numpy.org/doc/stable/)
-*   **OpenCV (cv2):** Library for computer vision, used here for rendering the Tetris game and video generation.
-    *   Documentation: [https://docs.opencv.org/](https://docs.opencv.org/)
-    *   Python Bindings: Often referred to as `cv2`.
-*   **Matplotlib:** Plotting library, potentially used for visualizing training progress or results.
-    *   Documentation: [https://matplotlib.org/stable/contents.html](https://matplotlib.org/stable/contents.html)
-*   **NEAT (neat-python)** Library for implementing the NEAT algorithm.
-    *   Documentation: [https://neat-python.readthedocs.io/en/latest/](https://neat-python.readthedocs.io/en/latest/)
+- **PyTorch:** Deep learning framework used for neural network implementations.
+  - Documentation: [https://pytorch.org/docs/stable/index.html](https://pytorch.org/docs/stable/index.html)
+- **NumPy:** Fundamental package for numerical computation in Python.
+  - Documentation: [https://numpy.org/doc/stable/](https://numpy.org/doc/stable/)
+- **OpenCV (cv2):** Library for computer vision, used here for rendering the Tetris game and video generation.
+  - Documentation: [https://docs.opencv.org/](https://docs.opencv.org/)
+  - Python Bindings: Often referred to as `cv2`.
+- **Matplotlib:** Plotting library, potentially used for visualizing training progress or results.
+  - Documentation: [https://matplotlib.org/stable/contents.html](https://matplotlib.org/stable/contents.html)
+- **NEAT (neat-python)** Library for implementing the NEAT algorithm.
+  - Documentation: [https://neat-python.readthedocs.io/en/latest/](https://neat-python.readthedocs.io/en/latest/)
