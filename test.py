@@ -8,6 +8,7 @@ import re
 import imageio  # For GIF creation
 import cv2
 from PIL import Image
+from collections import deque
 
 import config as tetris_config
 from agents import AGENT_REGISTRY
@@ -219,6 +220,7 @@ def play_game(
     game_seed,
     record_frames=False,
     max_pieces=10000,
+    max_frames_to_keep=1000,  # Add this parameter
 ):
     """Plays one game of Tetris and returns the score and piece count."""
     random.seed(game_seed)
@@ -236,7 +238,12 @@ def play_game(
     game_score = 0
     game_over = False
     pieces_played = 0
-    frames = []
+    frames = None
+
+    if record_frames:
+        frames = deque(maxlen=max_frames_to_keep)  # Use deque to limit frames
+    else:
+        frames = None
 
     while not game_over and pieces_played < max_pieces:
         action_tuple, _ = agent.select_action(
@@ -247,7 +254,7 @@ def play_game(
 
         if record_frames:
             frame = _get_rgb_frame_from_env(env)
-            frames.append(frame)
+            frames.append(frame)  # Add to deque
 
         reward, game_over = env.step(action_tuple, render=False)
         game_score += int(reward)
@@ -261,7 +268,10 @@ def play_game(
             current_board_features = current_board_features.cuda()
 
     if record_frames:
-        frames.append(_get_rgb_frame_from_env(env))
+        # Capture final frame and convert to list
+        frame = _get_rgb_frame_from_env(env)
+        frames.append(frame)
+        frames = list(frames)  # Convert deque to list
 
     return game_score, pieces_played, env.tetrominoes, env.cleared_lines, frames
 
@@ -396,15 +406,15 @@ def test():
     best_score_found = -float("inf")
     seed_for_best_game = None
     all_test_scores = []
-    best_game_frames = None
 
+    # First pass: find best game without recording
     for i_game in range(opt.num_games):
         current_game_seed = test_master_seed + 1000 + i_game
-        score, pieces, _, _, frames = play_game(
+        score, pieces, _, _, _ = play_game(
             env,
             agent,
             current_game_seed,
-            record_frames=True,
+            record_frames=False,  # No recording in first pass
             max_pieces=tetris_config.MAX_PIECES_PER_EVAL_GAME,
         )
         all_test_scores.append(score)
@@ -413,14 +423,22 @@ def test():
         if score > best_score_found:
             best_score_found = score
             seed_for_best_game = current_game_seed
-            best_game_frames = frames
-            print(
-                f"    New best score: {best_score_found} (seed: {seed_for_best_game})"
-            )
+            print(f"    New best score: {best_score_found} (seed: {seed_for_best_game})")
 
-    if seed_for_best_game is None or not best_game_frames:
+    if seed_for_best_game is None:
         print("\nNo games were successfully played. Cannot create GIF.")
         return
+
+    # Replay best game with recording
+    print(f"\nReplaying best game (Seed: {seed_for_best_game}) to record GIF...")
+    score, pieces, _, _, best_game_frames = play_game(
+        env,
+        agent,
+        seed_for_best_game,
+        record_frames=True,
+        max_pieces=tetris_config.MAX_PIECES_PER_EVAL_GAME,
+        max_frames_to_keep=1000  # Only keep last 1000 frames
+    )
 
     gif_filename = (
         f"{opt.output_gif_basename}_score_{best_score_found}_{opt.agent_type}.gif"

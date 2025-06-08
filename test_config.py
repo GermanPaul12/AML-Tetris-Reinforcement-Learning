@@ -13,12 +13,9 @@ PROJECT_ROOT = "."
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models_test_suite") # Separate dir for test models
 
 # --- Agent Types (can test a subset if desired) ---
-AGENT_TYPES = ["random", "dqn_original", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
+AGENT_TYPES = ["random", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
 
 # --- Model Paths (point to test_suite directory) ---
-ORIGINAL_DQN_MODEL_FILENAME = "dqn_tetris_original_test.pth"
-ORIGINAL_DQN_MODEL_PATH = os.path.join(MODEL_DIR, ORIGINAL_DQN_MODEL_FILENAME)
-# ... (Define all other model paths similarly, pointing to MODEL_DIR)
 DQN_MODEL_FILENAME = "dqn_tetris_test.pth"
 DQN_MODEL_PATH = os.path.join(MODEL_DIR, DQN_MODEL_FILENAME)
 GA_MODEL_FILENAME = "ga_best_tetris_test.pth"
