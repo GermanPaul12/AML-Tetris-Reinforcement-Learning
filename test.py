@@ -24,10 +24,6 @@ def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
             return "ppo-critic"
         else:
             return "ppo-model"
-    if agent_type_str == "genetic":
-        return "genetic"
-    if agent_type_str == "es":
-        return "es"
     return processed_agent_type
 
 
@@ -44,7 +40,6 @@ def parse_score_from_filename(filename_basename, expected_prefix):
 
 def find_latest_or_best_model_path(agent_type_str, model_dir):
     best_score = -1
-    best_model_path = None
 
     if not os.path.isdir(model_dir):
         print(f"Warning: Model directory {model_dir} does not exist.")
