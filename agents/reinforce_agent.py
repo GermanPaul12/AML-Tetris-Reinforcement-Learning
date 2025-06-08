@@ -9,12 +9,11 @@ import random
 import os
 
 from .base_agent import BaseAgent
-import config as global_config  # Your project's config
+import config as global_config
 
 DEVICE = global_config.DEVICE
 
 
-# Policy Network for REINFORCE - Actor scores S' states
 class PolicyNetworkREINFORCE(nn.Module):
     def __init__(self, state_size, fc1_units, fc2_units):
         super(PolicyNetworkREINFORCE, self).__init__()

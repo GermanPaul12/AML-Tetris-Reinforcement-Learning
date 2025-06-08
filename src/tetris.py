@@ -1,6 +1,7 @@
 """
 @author: Viet Nguyen <nhviet1009@gmail.com>
 """
+
 import numpy as np
 from PIL import Image
 import cv2
@@ -9,6 +10,7 @@ import torch
 import random
 
 style.use("ggplot")
+
 
 class Tetris:
     piece_colors = [
@@ -19,37 +21,27 @@ class Tetris:
         (255, 0, 0),
         (102, 217, 238),
         (254, 151, 32),
-        (0, 0, 255)
+        (0, 0, 255),
     ]
 
     pieces = [
-        [[1, 1],
-         [1, 1]],
-
-        [[0, 2, 0],
-         [2, 2, 2]],
-
-        [[0, 3, 3],
-         [3, 3, 0]],
-
-        [[4, 4, 0],
-         [0, 4, 4]],
-
+        [[1, 1], [1, 1]],
+        [[0, 2, 0], [2, 2, 2]],
+        [[0, 3, 3], [3, 3, 0]],
+        [[4, 4, 0], [0, 4, 4]],
         [[5, 5, 5, 5]],
-
-        [[0, 0, 6],
-         [6, 6, 6]],
-
-        [[7, 0, 0],
-         [7, 7, 7]]
+        [[0, 0, 6], [6, 6, 6]],
+        [[7, 0, 0], [7, 7, 7]],
     ]
 
     def __init__(self, height=20, width=10, block_size=20):
         self.height = height
         self.width = width
         self.block_size = block_size
-        self.extra_board = np.ones((self.height * self.block_size, self.width * int(self.block_size / 2), 3),
-                                   dtype=np.uint8) * np.array([204, 204, 255], dtype=np.uint8)
+        self.extra_board = np.ones(
+            (self.height * self.block_size, self.width * int(self.block_size / 2), 3),
+            dtype=np.uint8,
+        ) * np.array([204, 204, 255], dtype=np.uint8)
         self.text_color = (200, 20, 220)
         self.reset()
 
@@ -91,13 +83,15 @@ class Tetris:
             row = 0
             while row < self.height and col[row] == 0:
                 row += 1
-            num_holes += len([x for x in col[row + 1:] if x == 0])
+            num_holes += len([x for x in col[row + 1 :] if x == 0])
         return num_holes
 
     def get_bumpiness_and_height(self, board):
         board = np.array(board)
         mask = board != 0
-        invert_heights = np.where(mask.any(axis=0), np.argmax(mask, axis=0), self.height)
+        invert_heights = np.where(
+            mask.any(axis=0), np.argmax(mask, axis=0), self.height
+        )
         heights = self.height - invert_heights
         total_height = np.sum(heights)
         currs = heights[:-1]
@@ -134,7 +128,9 @@ class Tetris:
         board = [x[:] for x in self.board]
         for y in range(len(self.piece)):
             for x in range(len(self.piece[y])):
-                board[y + self.current_pos["y"]][x + self.current_pos["x"]] = self.piece[y][x]
+                board[y + self.current_pos["y"]][x + self.current_pos["x"]] = (
+                    self.piece[y][x]
+                )
         return board
 
     def new_piece(self):
@@ -143,9 +139,7 @@ class Tetris:
             random.shuffle(self.bag)
         self.ind = self.bag.pop()
         self.piece = [row[:] for row in self.pieces[self.ind]]
-        self.current_pos = {"x": self.width // 2 - len(self.piece[0]) // 2,
-                            "y": 0
-                            }
+        self.current_pos = {"x": self.width // 2 - len(self.piece[0]) // 2, "y": 0}
         if self.check_collision(self.piece, self.current_pos):
             self.gameover = True
 
@@ -153,7 +147,11 @@ class Tetris:
         future_y = pos["y"] + 1
         for y in range(len(piece)):
             for x in range(len(piece[y])):
-                if future_y + y > self.height - 1 or self.board[future_y + y][pos["x"] + x] and piece[y][x]:
+                if (
+                    future_y + y > self.height - 1
+                    or self.board[future_y + y][pos["x"] + x]
+                    and piece[y][x]
+                ):
                     return True
         return False
 
@@ -173,7 +171,11 @@ class Tetris:
                 del piece[0]
                 for y in range(len(piece)):
                     for x in range(len(piece[y])):
-                        if self.board[pos["y"] + y][pos["x"] + x] and piece[y][x] and y > last_collision_row:
+                        if (
+                            self.board[pos["y"] + y][pos["x"] + x]
+                            and piece[y][x]
+                            and y > last_collision_row
+                        ):
                             last_collision_row = y
         return gameover
 
@@ -218,7 +220,7 @@ class Tetris:
         self.board = self.store(self.piece, self.current_pos)
 
         lines_cleared, self.board = self.check_cleared_rows(self.board)
-        score = 1 + (lines_cleared ** 2) * self.width
+        score = 1 + (lines_cleared**2) * self.width
         self.score += score
         self.tetrominoes += 1
         self.cleared_lines += lines_cleared
@@ -231,38 +233,91 @@ class Tetris:
 
     def render(self, video=None):
         if not self.gameover:
-            img = [self.piece_colors[p] for row in self.get_current_board_state() for p in row]
+            img = [
+                self.piece_colors[p]
+                for row in self.get_current_board_state()
+                for p in row
+            ]
         else:
             img = [self.piece_colors[p] for row in self.board for p in row]
         img = np.array(img).reshape((self.height, self.width, 3)).astype(np.uint8)
         img = img[..., ::-1]
         img = Image.fromarray(img, "RGB")
 
-        img = img.resize((self.width * self.block_size, self.height * self.block_size), 0)
+        img = img.resize(
+            (self.width * self.block_size, self.height * self.block_size), 0
+        )
         img = np.array(img)
         img[[i * self.block_size for i in range(self.height)], :, :] = 0
         img[:, [i * self.block_size for i in range(self.width)], :] = 0
 
         img = np.concatenate((img, self.extra_board), axis=1)
 
+        cv2.putText(
+            img,
+            "Score:",
+            (self.width * self.block_size + int(self.block_size / 2), self.block_size),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
+        cv2.putText(
+            img,
+            str(self.score),
+            (
+                self.width * self.block_size + int(self.block_size / 2),
+                2 * self.block_size,
+            ),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
 
-        cv2.putText(img, "Score:", (self.width * self.block_size + int(self.block_size / 2), self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
-        cv2.putText(img, str(self.score),
-                    (self.width * self.block_size + int(self.block_size / 2), 2 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
+        cv2.putText(
+            img,
+            "Pieces:",
+            (
+                self.width * self.block_size + int(self.block_size / 2),
+                4 * self.block_size,
+            ),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
+        cv2.putText(
+            img,
+            str(self.tetrominoes),
+            (
+                self.width * self.block_size + int(self.block_size / 2),
+                5 * self.block_size,
+            ),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
 
-        cv2.putText(img, "Pieces:", (self.width * self.block_size + int(self.block_size / 2), 4 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
-        cv2.putText(img, str(self.tetrominoes),
-                    (self.width * self.block_size + int(self.block_size / 2), 5 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
-
-        cv2.putText(img, "Lines:", (self.width * self.block_size + int(self.block_size / 2), 7 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
-        cv2.putText(img, str(self.cleared_lines),
-                    (self.width * self.block_size + int(self.block_size / 2), 8 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
+        cv2.putText(
+            img,
+            "Lines:",
+            (
+                self.width * self.block_size + int(self.block_size / 2),
+                7 * self.block_size,
+            ),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
+        cv2.putText(
+            img,
+            str(self.cleared_lines),
+            (
+                self.width * self.block_size + int(self.block_size / 2),
+                8 * self.block_size,
+            ),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=1.0,
+            color=self.text_color,
+        )
 
         if video:
             video.write(img)

@@ -59,7 +59,7 @@ def get_args():
         "--agent_type",
         type=str,
         default="dqn",
-        choices=["dqn", "reinforce"], 
+        choices=["dqn", "reinforce"],
         help="Type of agent to train (dqn or reinforce).",
     )
 
