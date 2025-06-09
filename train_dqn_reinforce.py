@@ -11,29 +11,27 @@ import config as tetris_config
 from agents import AGENT_REGISTRY
 from src.tetris import Tetris
 
+################################################################
+# Helper Functions for Agent File Management and Score Parsing #
+################################################################
 
-def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
+def get_agent_file_prefix(agent_type_str:str, is_actor:bool=False, is_critic:bool=False):
+    """Generates a standardized file prefix for saving/loading agent models."""
+    
     processed_agent_type = agent_type_str.replace("_", "-")
     if agent_type_str == "ppo":
-        if is_actor:
-            return "ppo-actor"
-        elif is_critic:
-            return "ppo-critic"
-        else:
-            return "ppo-model"
+        if is_actor: return "ppo-actor"
+        elif is_critic: return "ppo-critic"
+        else: return "ppo-model"
     return processed_agent_type
-
 
 def parse_score_from_filename(filename_basename, expected_prefix):
     pattern = re.compile(f"^{re.escape(expected_prefix)}_score_(\\d+)\\.pth$")
     match = pattern.match(filename_basename)
     if match:
-        try:
-            return int(match.group(1))
-        except ValueError:
-            return None
+        try: return int(match.group(1))
+        except ValueError: return None
     return None
-
 
 def find_best_existing_score(agent_prefix, model_dir):
     max_score = -1
