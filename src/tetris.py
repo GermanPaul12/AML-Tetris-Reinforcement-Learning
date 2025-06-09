@@ -7,7 +7,7 @@ Refactored for this RL-Project:
 - Added comments for clarity
 - Simplified some logic for better readability
 - Ensured consistent formatting and style
-- Removed unused imports and variables
+- Removed unused imports and variables 
 """
 
 import cv2
@@ -20,29 +20,28 @@ from matplotlib import style
 
 style.use("ggplot")
 
-
 class Tetris:
     piece_colors = [
-        (0, 0, 0),  # Empty space
-        (255, 255, 0),  # O piece, yellow
-        (147, 88, 254),  # T piece, purple
-        (54, 175, 144),  # S piece, green
-        (255, 0, 0),  # Z piece, red
-        (102, 217, 238),  # I piece, cyan
-        (254, 151, 32),  # L piece, orange
-        (0, 0, 255),  # J piece, blue
+        (0, 0, 0),          # Empty space
+        (255, 255, 0),      # O piece, yellow
+        (147, 88, 254),     # T piece, purple
+        (54, 175, 144),     # S piece, green
+        (255, 0, 0),        # Z piece, red
+        (102, 217, 238),    # I piece, cyan
+        (254, 151, 32),     # L piece, orange
+        (0, 0, 255),        # J piece, blue
     ]
     pieces = [
-        [[1, 1], [1, 1]],  # O piece
-        [[0, 2, 0], [2, 2, 2]],  # T piece
-        [[0, 3, 3], [3, 3, 0]],  # S piece
-        [[4, 4, 0], [0, 4, 4]],  # Z piece
-        [[5, 5, 5, 5]],  # I piece
-        [[0, 0, 6], [6, 6, 6]],  # L piece
-        [[7, 0, 0], [7, 7, 7]],  # J piece
+        [[1, 1], [1, 1]],       # O piece
+        [[0, 2, 0], [2, 2, 2]], # T piece
+        [[0, 3, 3], [3, 3, 0]], # S piece
+        [[4, 4, 0], [0, 4, 4]], # Z piece
+        [[5, 5, 5, 5]],         # I piece
+        [[0, 0, 6], [6, 6, 6]], # L piece
+        [[7, 0, 0], [7, 7, 7]], # J piece
     ]
 
-    def __init__(self, height: int = 20, width: int = 10, block_size: int = 20) -> None:
+    def __init__(self, height:int=20, width:int=10, block_size:int=30) -> None:
         """Initialize the Tetris game with specified height, width, and block size.
         Args:
             height (int, optional): Height of the Tetris board. Defaults to 20.
@@ -75,7 +74,7 @@ class Tetris:
         self.gameover = False
         return self.get_state_properties(self.board)
 
-    def get_state_properties(self, board: list[list[int]]) -> torch.FloatTensor:
+    def get_state_properties(self, board:list[list[int]]) -> torch.FloatTensor:
         """Calculate and return the state properties of the Tetris board.
         Args:
             board (list): The current state of the Tetris board.
@@ -88,7 +87,7 @@ class Tetris:
 
         return torch.FloatTensor([lines_cleared, holes, bumpiness, height])
 
-    def check_cleared_rows(self, board: list[list[int]]) -> Tuple[int, list]:
+    def check_cleared_rows(self, board:list[list[int]]) -> Tuple[int, list]:
         """Check for cleared rows in the Tetris board and remove them.
         Args:
             board (list): The current state of the Tetris board.
@@ -102,9 +101,9 @@ class Tetris:
         if len(to_delete) > 0:
             board = self.remove_row(board, to_delete)
         return len(to_delete), board
-
-    def get_holes(self, board: list[list[int]]) -> int:
-        """Calculate number of holes in the Tetris board.
+    
+    def get_holes(self, board:list[list[int]]) -> int:
+        """ Calculate number of holes in the Tetris board.
         Args:
             board (list): The current state of the Tetris board.
         Returns:
@@ -113,12 +112,11 @@ class Tetris:
         num_holes = 0
         for col in zip(*board):
             row = 0
-            while row < self.height and col[row] == 0:
-                row += 1
+            while row < self.height and col[row] == 0: row += 1
             num_holes += len([x for x in col[row + 1 :] if x == 0])
         return num_holes
 
-    def get_bumpiness_and_height(self, board: list[list[int]]) -> Tuple[int, int]:
+    def get_bumpiness_and_height(self, board:list[list[int]]) -> Tuple[int, int]:
         """Calculate the bumpiness and height of the Tetris board.
         Args:
             board (list): The current state of the Tetris board.
@@ -126,10 +124,8 @@ class Tetris:
             Tuple ([int, int]): A tuple containing the total bumpiness and total height of the board.
         """
         board = np.array(board)
-        mask = board != 0
-        invert_heights = np.where(
-            mask.any(axis=0), np.argmax(mask, axis=0), self.height
-        )
+        mask = (board != 0)
+        invert_heights = np.where(mask.any(axis=0), np.argmax(mask, axis=0), self.height)
         heights = self.height - invert_heights
         total_height = np.sum(heights)
         total_bumpiness = np.sum(np.abs(heights[:-1] - heights[1:]))
@@ -143,21 +139,17 @@ class Tetris:
         states = {}
         piece_id = self.ind
         curr_piece = [row[:] for row in self.piece]
-
+        
         # Determine the number of rotations based on the piece type
-        if piece_id == 0:
-            num_rotations = 1
-        elif piece_id == 2 or piece_id == 3 or piece_id == 4:
-            num_rotations = 2
-        else:
-            num_rotations = 4
+        if piece_id == 0: num_rotations = 1
+        elif piece_id == 2 or piece_id == 3 or piece_id == 4: num_rotations = 2
+        else: num_rotations = 4
 
         for i in range(num_rotations):
             valid_xs = self.width - len(curr_piece[0])
             for x in range(valid_xs + 1):
                 piece, pos = [row[:] for row in curr_piece], {"x": x, "y": 0}
-                while not self.check_collision(piece, pos):
-                    pos["y"] += 1
+                while not self.check_collision(piece, pos): pos["y"] += 1
                 self.truncate(piece, pos)
                 board = self.store(piece, pos)
                 states[(x, i)] = self.get_state_properties(board)
@@ -172,9 +164,7 @@ class Tetris:
         board = [x[:] for x in self.board]
         for y in range(len(self.piece)):
             for x in range(len(self.piece[y])):
-                board[y + self.current_pos["y"]][x + self.current_pos["x"]] = (
-                    self.piece[y][x]
-                )
+                board[y + self.current_pos["y"]][x + self.current_pos["x"]] = (self.piece[y][x])
         return board
 
     def new_piece(self) -> None:
@@ -188,7 +178,7 @@ class Tetris:
         if self.check_collision(self.piece, self.current_pos):
             self.gameover = True
 
-    def check_collision(self, piece: list[list[int]], pos: dict[str, int]) -> bool:
+    def check_collision(self, piece:list[list[int]], pos:dict[str,int]) -> bool:
         """Check if the current piece collides with the board or goes out of bounds.
         Args:
             piece (list[list[int]]): The current piece represented as a 2D list.
@@ -199,15 +189,13 @@ class Tetris:
         future_y = pos["y"] + 1
         for y in range(len(piece)):
             for x in range(len(piece[y])):
-                if (
-                    future_y + y > self.height - 1
+                if (future_y + y > self.height - 1
                     or self.board[future_y + y][pos["x"] + x]
-                    and piece[y][x]
-                ):
+                    and piece[y][x]):
                     return True
         return False
 
-    def truncate(self, piece: list[list[int]], pos: dict[str, int]) -> bool:
+    def truncate(self, piece:list[list[int]], pos:dict[str,int]) -> bool:
         """Truncate the piece if it collides with the top of the board.
         Args:
             piece (list[list[int]]): The current piece represented as a 2D list.
@@ -230,15 +218,13 @@ class Tetris:
                 del piece[0]
                 for y in range(len(piece)):
                     for x in range(len(piece[y])):
-                        if (
-                            self.board[pos["y"] + y][pos["x"] + x]
+                        if (self.board[pos["y"] + y][pos["x"] + x]
                             and piece[y][x]
-                            and y > last_collision_row
-                        ):
+                            and y > last_collision_row):
                             last_collision_row = y
         return gameover
 
-    def store(self, piece: list[list[int]], pos: dict[str, int]) -> list[list[int]]:
+    def store(self, piece:list[list[int]], pos:dict[str,int]) -> list[list[int]]:
         """Store the current piece on the Tetris board at the specified position.
         Args:
             piece (list[list[int]]): The current piece represented as a 2D list.
@@ -253,7 +239,7 @@ class Tetris:
                     board[y + pos["y"]][x + pos["x"]] = piece[y][x]
         return board
 
-    def remove_row(self, board: list[list[int]], indices: list) -> list:
+    def remove_row(self, board:list[list[int]], indices:list) -> list:
         """Remove specified rows from the Tetris board and shift the remaining rows down.
         Args:
             board (list): The current state of the Tetris board.
@@ -266,7 +252,7 @@ class Tetris:
             board = [[0 for _ in range(self.width)]] + board
         return board
 
-    def rotate(self, piece: list[list[int]]) -> list[list[int]]:
+    def rotate(self, piece:list[list[int]]) -> list[list[int]]:
         """Rotate the current piece 90 degrees clockwise.
         Args:
             piece (list[list[int]]): The current piece represented as a 2D list.
@@ -283,15 +269,15 @@ class Tetris:
                 new_row[j] = piece[(num_rows_orig - 1) - j][i]
             rotated_array.append(new_row)
         return rotated_array
-
-    def step(self, action: tuple[int, int], render: bool = True, video: bool = False):
+    
+    def step(self, action:tuple[int,int], render:bool=True, video:bool=False):
         """Perform a step in the Tetris game with the given action.
-
+        
         Args:
             action (tuple): A tuple containing the x-coordinate and number of rotations.
             render (bool, optional): If True, renders the game state. Defaults to True.
             video (bool, optional): If True, saves the rendered frame to a video file. Defaults to False.
-
+        
         Returns:
             tuple: A tuple containing the score and a boolean indicating if the game is over.
         """
@@ -302,11 +288,9 @@ class Tetris:
 
         while not self.check_collision(self.piece, self.current_pos):
             self.current_pos["y"] += 1
-            if render:
-                self.render(video)
+            if render: self.render(video)
 
-        if self.truncate(self.piece, self.current_pos):
-            self.gameover = True  # Game over if piece is truncated at the top
+        if self.truncate(self.piece, self.current_pos): self.gameover = True # Game over if piece is truncated at the top
 
         self.board = self.store(self.piece, self.current_pos)
 
@@ -315,98 +299,44 @@ class Tetris:
         self.score += score
         self.tetrominoes += 1
         self.cleared_lines += lines_cleared
-
-        if not self.gameover:
-            self.new_piece()
-        else:
-            self.score -= 2
+        
+        if not self.gameover: self.new_piece()
+        else: self.score -= 2
 
         return score, self.gameover
 
-    def render(self, video: bool = False):
+    def render(self, video:bool=False):
         """Render the current state of the Tetris game.
 
         Args:
             video (bool, optional): If True, saves the rendered frame to a video file. Defaults to False.
         """
         if not self.gameover:
-            img = [
-                self.piece_colors[p]
-                for row in self.get_current_board_state()
-                for p in row
-            ]
+            img = [self.piece_colors[p] for row in self.get_current_board_state() for p in row]
         else:
             img = [self.piece_colors[p] for row in self.board for p in row]
         img = np.array(img).reshape((self.height, self.width, 3)).astype(np.uint8)
         img = img[..., ::-1]
         img = Image.fromarray(img, "RGB")
 
-        img = np.array(
-            img.resize((self.width * self.block_size, self.height * self.block_size), 0)
-        )
+        img = np.array(img.resize((self.width * self.block_size, self.height * self.block_size), 0))
         img[[i * self.block_size for i in range(self.height)], :, :] = 0
         img[:, [i * self.block_size for i in range(self.width)], :] = 0
 
         img = np.concatenate((img, self.extra_board), axis=1)
 
         def putText(img, text, org):
-            cv2.putText(
-                img,
-                text,
-                org,
-                fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                fontScale=1.0,
-                color=(200, 20, 220),
-            )
-
-        putText(
-            img,
-            "Score:",
-            (self.width * self.block_size + int(self.block_size / 2), self.block_size),
-        )
-        putText(
-            img,
-            str(self.score),
-            (
-                self.width * self.block_size + int(self.block_size / 2),
-                2 * self.block_size,
-            ),
-        )
-
-        putText(
-            img,
-            "Pieces:",
-            (
-                self.width * self.block_size + int(self.block_size / 2),
-                4 * self.block_size,
-            ),
-        )
-        putText(
-            img,
-            str(self.tetrominoes),
-            (
-                self.width * self.block_size + int(self.block_size / 2),
-                5 * self.block_size,
-            ),
-        )
-
-        putText(
-            img,
-            "Lines:",
-            (
-                self.width * self.block_size + int(self.block_size / 2),
-                7 * self.block_size,
-            ),
-        )
-        putText(
-            img,
-            str(self.cleared_lines),
-            (
-                self.width * self.block_size + int(self.block_size / 2),
-                8 * self.block_size,
-            ),
-        )
-
+            cv2.putText(img, text, org, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=(200, 20, 220))
+        
+        putText(img, "Score:", (self.width * self.block_size + int(self.block_size / 2), self.block_size))
+        putText(img, str(self.score), (self.width * self.block_size + int(self.block_size / 2), 2 * self.block_size))
+        
+        putText(img, "Pieces:", (self.width * self.block_size + int(self.block_size / 2), 4 * self.block_size))
+        putText(img, str(self.tetrominoes), (self.width * self.block_size + int(self.block_size / 2), 5 * self.block_size))
+        
+        putText(img, "Lines:", (self.width * self.block_size + int(self.block_size / 2), 7 * self.block_size))
+        putText(img, str(self.cleared_lines), (self.width * self.block_size + int(self.block_size / 2), 8 * self.block_size))
+        
         if video:
             video.write(img)
 

@@ -12,7 +12,6 @@ import config as tetris_config
 from agents import AGENT_REGISTRY
 from src.tetris import Tetris
 
-
 # --- Helper Functions (Copied from train_evolutionary.py, should be in a shared util) ---
 def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
     processed_agent_type = agent_type_str.replace("_", "-")

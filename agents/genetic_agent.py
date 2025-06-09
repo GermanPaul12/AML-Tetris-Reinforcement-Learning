@@ -11,9 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F  # Not strictly needed for GA policy forward, but good practice
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))  # to access config
-sys.path.append(
-    os.path.join(os.path.dirname(__file__), "..", "src")
-)  # to access tetris
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))  # to access tetris
 
 from src.tetris import Tetris
 from .base_agent import BaseAgent
@@ -29,14 +27,7 @@ class PolicyNetwork(nn.Module):
     Output: Single score for that state. Higher score is better.
     """
 
-    def __init__(
-        self,
-        state_size,
-        action_size=1,
-        seed=0,
-        fc1_units=global_config.GA_FC1_UNITS,
-        fc2_units=global_config.GA_FC2_UNITS,
-    ):
+    def __init__(self, state_size, action_size=1, seed=0, fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS):
         super(PolicyNetwork, self).__init__()
         self.seed = torch.manual_seed(seed)
         self.fc1 = nn.Linear(state_size, fc1_units)
@@ -56,20 +47,14 @@ class PolicyNetwork(nn.Module):
         return self.fc3(x)
 
     def get_weights_flat(self):
-        return np.concatenate(
-            [param.data.cpu().numpy().flatten() for param in self.parameters()]
-        )
+        return np.concatenate([param.data.cpu().numpy().flatten() for param in self.parameters()])
 
     def set_weights_flat(self, flat_weights):
         offset = 0
         for param in self.parameters():
             shape = param.data.shape
             num_elements = param.data.numel()
-            param.data.copy_(
-                torch.from_numpy(flat_weights[offset : offset + num_elements])
-                .view(shape)
-                .to(DEVICE)
-            )
+            param.data.copy_(torch.from_numpy(flat_weights[offset : offset + num_elements]).view(shape).to(DEVICE))
             offset += num_elements
         if offset != len(flat_weights):
             raise ValueError("Size mismatch in set_weights_flat")
@@ -87,7 +72,7 @@ class GeneticAlgorithmController:
         tournament_size=global_config.GA_TOURNAMENT_SIZE,
         elitism_count=global_config.GA_ELITISM_COUNT,
         eval_games_per_individual=global_config.GA_EVAL_GAMES_PER_INDIVIDUAL,
-        max_pieces_per_eval_game=global_config.GA_MAX_PIECES_PER_GA_EVAL_GAME,
+        max_pieces_per_eval_game=global_config.GA_MAX_PIECES_PER_GA_EVAL_GAME
     ):
         print(f"GA Controller initialized. Population: {population_size}, Seed: {seed}")
         self.state_size = state_size
