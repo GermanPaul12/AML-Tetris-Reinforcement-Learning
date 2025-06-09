@@ -19,10 +19,10 @@ This project was developed as part of the **Artificial Machine Learning (AML) co
 
 ## Contributors
 
-| Name             | Student ID | Image                                                                                                 |
-| ---------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
-| [German Paul](https://github.com/GermanPaul12)      | 9973152    | ![German Paul](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/GP_Github.png)  |
-| [Michael Greif](https://github.com/Greifenhard)    | [ID]  | ![Michael Greif](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/MG_Github.png)|
+| Name                                         | Student ID | Image                                                                                                 |
+| -------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| [German Paul](https://github.com/GermanPaul12)  | 9973152    | ![German Paul](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/GP_Github.png)   |
+| [Michael Greif](https://github.com/Greifenhard) | 5658606    | ![Michael Greif](https://raw.githubusercontent.com/GermanPaul12/datawhispers/main/assets/MG_Github.png) |
 
 ## Getting Started
 
@@ -190,11 +190,11 @@ This project implements several types of RL and EA agents to play Tetris. The Te
 - **Core Idea:** ES directly evolves the parameters (weights) of a single "central" policy network.
 - **Network:** Uses a `PolicyNetworkES` (MLP that scores features of S').
 - **Evolution Process:**
-    1. Start with a central set of weights for the policy network.
-    1. In each generation, create a population of "perturbed" versions of these central weights by adding Gaussian noise.
-    1. Evaluate the fitness (game score) of each set of perturbed weights by running Tetris games.
-    1. Update the central weights by moving them in the direction of the "gradient" estimated from the fitness scores of the perturbed individuals. Essentially, weights that led to higher scores get "reinforced." The update is a weighted sum of the noise vectors, where weights are derived from the fitness scores.
-    1. The learning rate and noise standard deviation (sigma) are key hyperparameters.
+  1. Start with a central set of weights for the policy network.
+  2. In each generation, create a population of "perturbed" versions of these central weights by adding Gaussian noise.
+  3. Evaluate the fitness (game score) of each set of perturbed weights by running Tetris games.
+  4. Update the central weights by moving them in the direction of the "gradient" estimated from the fitness scores of the perturbed individuals. Essentially, weights that led to higher scores get "reinforced." The update is a weighted sum of the noise vectors, where weights are derived from the fitness scores.
+  5. The learning rate and noise standard deviation (sigma) are key hyperparameters.
 - **Usage for Evaluation/Testing:** The `ESAgent` class uses its current best central policy network (updated through evolution) for action selection.
 - **Training Script:** `train_evolutionary.py`.
 
@@ -210,30 +210,31 @@ This project implements several types of RL and EA agents to play Tetris. The Te
 To get a visual sense of how our agents perform, we've recorded gameplay GIFs. These videos highlight the strategies (or lack thereof) learned by each agent.
 
 - **Random Agent Gameplay:**
+
   - *Comment:* As expected, the random agent makes moves without any apparent strategy, quickly leading to a game over with a low score.
   - `![Random Agent Gameplay](models/gifs/random_best_game_score_24_random.gif)`
-
 - **DQN Agent Gameplay:**
+
   - *Comment:* Our DQN agent demonstrates significantly improved play. It's making more strategic placements, clearing lines effectively, and achieving high scores, reflecting its strong quantitative performance.
   - `![DQN Agent Gameplay](YOUR_PATH_TO/DQN_Gameplay.gif)`
-
 - **Genetic Algorithm (Best Individual) Gameplay:**
+
   - *Comment:* The Genetic Algorithm showcases exceptional gameplay. The piece placements are highly optimized, leading to very efficient line clearing and the highest scores we've observed, consistent with its top ranking in our quantitative tests.
   - `![Genetic Algorithm Gameplay](YOUR_PATH_TO/GENETIC_Gameplay.gif)`
-
 - **REINFORCE Agent Gameplay:**
+
   - *Comment:* The REINFORCE agent shows signs of learning, making some reasonable moves and outperforming the random agent. However, its strategy is not as refined as our top performers, aligning with its mid-tier quantitative results.
   - `![REINFORCE Agent Gameplay](YOUR_PATH_TO/REINFORCE_Gameplay.gif)`
-
 - **A2C Agent Gameplay:**
+
   - *Comment:* Unfortunately, the A2C agent's gameplay reflects its poor quantitative performance. The moves appear largely random, and it struggles to clear lines or achieve a meaningful score. We'll need to investigate this agent further.
   - `![A2C Agent Gameplay](YOUR_PATH_TO/A2C_Gameplay.gif)`
-
 - **PPO Agent Gameplay:**
+
   - *Comment:* Our PPO agent exhibits a noticeable improvement over random play, attempting to make sensible placements. While it achieves respectable scores, its strategy isn't as sophisticated or high-scoring as our top-tier agents like GENETIC or DQN.
   - `![PPO Agent Gameplay](YOUR_PATH_TO/PPO_Gameplay.gif)`
-
 - **Evolutionary Strategies (Best Policy) Gameplay:**
+
   - *Comment:* The ES agent displays very strong and intelligent gameplay. It consistently makes strategic decisions, leading to high scores and effective line clearing, confirming its place as one of our top-performing agents.
   - `![ES Agent Gameplay](YOUR_PATH_TO/ES_Gameplay.gif)`
 
@@ -243,15 +244,15 @@ We evaluated our agents over 20 games after their respective training routines. 
 
 **Quantitative Evaluation Results:**
 
-| Agent     | Avg Score    | Std Score    | Min Score | Max Score | Avg Pieces   | Avg Tetrominoes | Avg Lines Cleared | Num Eval Games |
-| :-------- | :----------- | :----------- | :-------- | :-------- | :----------- | :-------------- | :---------------- | :------------- |
-| RANDOM    | 16.75        | 3.74         | 11        | 24        | 18.75        | 18.75           | 0.00              | 20             |
-| DQN       | **581974.70**| 575571.30    | 26772     | 1945608   | 70253.70     | 70253.70        | 28088.70          | 20             |
-| GENETIC   | **2123031.05**| 1813144.83   | 145855    | **5885656**| **344067.05**| **344067.05*- | **137613.90*-   | 20             |
-| REINFORCE | 22707.15     | 17638.53     | 1588      | 51922     | 3644.65      | 3644.65         | 1444.55           | 20             |
-| A2C       | 10.70        | 2.17         | 8         | 16        | 12.70        | 12.70           | 0.00              | 20             |
-| PPO       | 34448.35     | 31026.29     | 790       | 125177    | 3361.35      | 3361.35         | 1332.50           | 20             |
-| ES        | **1143788.20**| 1066014.95   | 7455      | 4470784   | 185097.70    | 185097.70       | 74027.15          | 20             |
+| Agent     | Avg Score            | Std Score  | Min Score | Max Score         | Avg Pieces          | Avg Tetrominoes | Avg Lines Cleared | Num Eval Games |
+| :-------- | :------------------- | :--------- | :-------- | :---------------- | :------------------ | :-------------- | :---------------- | :------------- |
+| RANDOM    | 16.75                | 3.74       | 11        | 24                | 18.75               | 18.75           | 0.00              | 20             |
+| DQN       | **581974.70**  | 575571.30  | 26772     | 1945608           | 70253.70            | 70253.70        | 28088.70          | 20             |
+| GENETIC   | **2123031.05** | 1813144.83 | 145855    | **5885656** | **344067.05** | **344067.05*- | **137613.90*-   | 20             |
+| REINFORCE | 22707.15             | 17638.53   | 1588      | 51922             | 3644.65             | 3644.65         | 1444.55           | 20             |
+| A2C       | 10.70                | 2.17       | 8         | 16                | 12.70               | 12.70           | 0.00              | 20             |
+| PPO       | 34448.35             | 31026.29   | 790       | 125177            | 3361.35             | 3361.35         | 1332.50           | 20             |
+| ES        | **1143788.20** | 1066014.95 | 7455      | 4470784           | 185097.70           | 185097.70       | 74027.15          | 20             |
 
 **Analysis of Our New Results:**
 
@@ -275,9 +276,9 @@ We evaluated our agents over 20 games after their respective training routines. 
 
 1. **Investigate A2C:** Our top priority is to figure out why A2C is underperforming. We'll need to thoroughly review its implementation, hyperparameter settings, model saving/loading logic, and how it handles evaluation mode.
 2. **Optimize PPO and REINFORCE:** While these are learning, we believe there's room for improvement. We plan to:
-    - Conduct further hyperparameter tuning.
-    - Double-check that we're consistently loading their best models from training for evaluation.
-    - Verify their evaluation mode is correctly set and enforced.
+   - Conduct further hyperparameter tuning.
+   - Double-check that we're consistently loading their best models from training for evaluation.
+   - Verify their evaluation mode is correctly set and enforced.
 3. **Analyze Our Top Performers:** We want to dig deeper into what makes GENETIC, ES, and DQN so successful in our current framework. This might involve looking at the characteristics of the policies they've learned or which features they seem to be leveraging most effectively.
 4. **Ensure Consistency in Evaluation:** We will continue to ensure all agents are evaluated under identical conditions and that our evaluation scripts robustly load the best available model for each agent, using our score-in-filename convention.
 5. **Feature Engineering & Network Architecture (Longer-Term):** For agents that aren't yet at the top tier, we might revisit our state representation (the current 4 heuristic features) and the complexity of our neural network architectures in the future. However, it's encouraging that GENETIC, ES, and DQN have demonstrated that high scores are achievable with the current setup.

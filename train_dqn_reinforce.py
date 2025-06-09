@@ -11,8 +11,16 @@ import config as tetris_config
 from agents import AGENT_REGISTRY
 from src.tetris import Tetris
 
+################################################################
+# Helper Functions for Agent File Management and Score Parsing #
+################################################################
 
-def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
+
+def get_agent_file_prefix(
+    agent_type_str: str, is_actor: bool = False, is_critic: bool = False
+):
+    """Generates a standardized file prefix for saving/loading agent models."""
+
     processed_agent_type = agent_type_str.replace("_", "-")
     if agent_type_str == "ppo":
         if is_actor:

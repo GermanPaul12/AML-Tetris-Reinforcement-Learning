@@ -9,8 +9,8 @@ import re
 import sys
 
 import config as tetris_config
-from agents import AGENT_REGISTRY  # Ensure this is correctly populated
-from src.tetris import Tetris  # The game environment
+from agents import AGENT_REGISTRY
+from src.tetris import Tetris
 
 
 # --- Helper Functions (Copied from train_evolutionary.py, should be in a shared util) ---
@@ -43,8 +43,6 @@ def parse_score_from_filename(filename_basename, expected_prefix):
 
 def find_latest_or_best_model_path(agent_type_str, model_dir):
     best_score = -1
-    best_model_path = None
-    latest_mtime = 0  # To track latest if no scored files
 
     if not os.path.isdir(model_dir):
         print(
@@ -173,17 +171,6 @@ def run_evaluation_game(env: Tetris, agent, game_seed_for_env_reset_unused):
                 "cv2" in sys.modules
             ):  # Only if cv2 is imported by tetris.py for rendering
                 sys.modules["cv2"].waitKey(1)
-
-    # Calculate per-game stats by diffing cumulative values from Tetris instance
-    lines_cleared_this_game = env.cleared_lines - initial_total_lines
-    tetrominoes_played_this_game = env.tetrominoes - initial_total_tetrominoes
-
-    # The env.score should reflect the score for this single game because env.reset() was called.
-    # If env.reset() does NOT reset env.score, then game_score_this_eval_run is the correct one to use.
-    # Let's trust game_score_this_eval_run as it's explicitly accumulated.
-    # However, env.tetrominoes and env.cleared_lines in your Tetris class are cumulative across resets
-    # unless Tetris.reset specifically sets them to 0.
-    # Your Tetris.reset does: self.score=0, self.tetrominoes=0, self.cleared_lines=0. So this is fine.
 
     return env.score, pieces_played_this_eval_run, env.tetrominoes, env.cleared_lines
 

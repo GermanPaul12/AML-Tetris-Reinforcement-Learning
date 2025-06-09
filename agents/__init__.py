@@ -1,7 +1,7 @@
 # tetris_rl_agents/agents/__init__.py
 from .random_agent import RandomAgent
 from .dqn_agent import DQNAgent
-from .genetic_agent import GeneticAgent
+from .genetic_agent import GeneticAgent, GeneticAlgorithmController
 from .reinforce_agent import REINFORCEAgent
 from .a2c_agent import A2CAgent
 from .ppo_agent import PPOAgent

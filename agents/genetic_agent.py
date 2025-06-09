@@ -1,22 +1,23 @@
 # tetris_rl_agents/agents/genetic_agent.py
+
+import os
+import sys
+import copy
+import random
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F  # Not strictly needed for GA policy forward, but good practice
-import numpy as np
-import random
-import os
-import copy
-
-import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))  # to access config
 sys.path.append(
     os.path.join(os.path.dirname(__file__), "..", "src")
 )  # to access tetris
-from src.tetris import Tetris
 
-import config as global_config
+from src.tetris import Tetris
 from .base_agent import BaseAgent
+import config as global_config
 
 DEVICE = global_config.DEVICE
 
@@ -32,7 +33,7 @@ class PolicyNetwork(nn.Module):
         self,
         state_size,
         action_size=1,
-        seed=0,  # action_size is effectively 1
+        seed=0,
         fc1_units=global_config.GA_FC1_UNITS,
         fc2_units=global_config.GA_FC2_UNITS,
     ):
@@ -40,10 +41,10 @@ class PolicyNetwork(nn.Module):
         self.seed = torch.manual_seed(seed)
         self.fc1 = nn.Linear(state_size, fc1_units)
         self.fc2 = nn.Linear(fc1_units, fc2_units)
-        self.fc3 = nn.Linear(fc2_units, action_size)  # Output a single score
-        self._create_weights()  # Initialize weights
+        self.fc3 = nn.Linear(fc2_units, action_size)
+        self._create_weights()
 
-    def _create_weights(self):  # Optional: specific weight initialization
+    def _create_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
@@ -52,11 +53,11 @@ class PolicyNetwork(nn.Module):
     def forward(self, state_features):
         x = F.relu(self.fc1(state_features))
         x = F.relu(self.fc2(x))
-        return self.fc3(x)  # Raw score
+        return self.fc3(x)
 
     def get_weights_flat(self):
         return np.concatenate(
-            [p.data.cpu().numpy().flatten() for p in self.parameters()]
+            [param.data.cpu().numpy().flatten() for param in self.parameters()]
         )
 
     def set_weights_flat(self, flat_weights):
