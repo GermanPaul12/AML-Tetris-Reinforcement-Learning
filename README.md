@@ -211,32 +211,32 @@ To get a visual sense of how our agents perform, we've recorded gameplay GIFs. T
 
 - **Random Agent Gameplay:**
 
-  - *Comment:* As expected, the random agent makes moves without any apparent strategy, quickly leading to a game over with a low score.
-  - `![Random Agent Gameplay](models/gifs/random_best_game_score_24_random.gif)`
+  - As expected, the random agent makes moves without any apparent strategy, quickly leading to a game over with a low score.
+  - ![Random Agent Gameplay](./models/gifs/random_best_game_score_24_random.gif)
 - **DQN Agent Gameplay:**
 
-  - *Comment:* Our DQN agent demonstrates significantly improved play. It's making more strategic placements, clearing lines effectively, and achieving high scores, reflecting its strong quantitative performance.
-  - `![DQN Agent Gameplay](YOUR_PATH_TO/DQN_Gameplay.gif)`
+  - Our DQN agent demonstrates significantly improved play. It's making more strategic placements, clearing lines effectively, and achieving high scores, reflecting its strong quantitative performance.
+  - ![DQN Agent Gameplay](models/gifs/dqn_best_game_score_1173325_dqn.gif)
 - **Genetic Algorithm (Best Individual) Gameplay:**
 
-  - *Comment:* The Genetic Algorithm showcases exceptional gameplay. The piece placements are highly optimized, leading to very efficient line clearing and the highest scores we've observed, consistent with its top ranking in our quantitative tests.
-  - `![Genetic Algorithm Gameplay](YOUR_PATH_TO/GENETIC_Gameplay.gif)`
+  - The Genetic Algorithm showcases exceptional gameplay. The piece placements are highly optimized, leading to very efficient line clearing and the highest scores we've observed, consistent with its top ranking in our quantitative tests.
+  - ![Genetic Algorithm Gameplay](models/gifs/genetic_best_game_score_1319099_genetic.gif)
 - **REINFORCE Agent Gameplay:**
 
-  - *Comment:* The REINFORCE agent shows signs of learning, making some reasonable moves and outperforming the random agent. However, its strategy is not as refined as our top performers, aligning with its mid-tier quantitative results.
-  - `![REINFORCE Agent Gameplay](YOUR_PATH_TO/REINFORCE_Gameplay.gif)`
+  - The REINFORCE agent shows signs of learning, making some reasonable moves and outperforming the random agent. However, its strategy is not as refined as our top performers, aligning with its mid-tier quantitative results.
+  - ![REINFORCE Agent Gameplay](models/gifs/reinforce_best_game_score_30689_reinforce.gif)
 - **A2C Agent Gameplay:**
 
-  - *Comment:* Unfortunately, the A2C agent's gameplay reflects its poor quantitative performance. The moves appear largely random, and it struggles to clear lines or achieve a meaningful score. We'll need to investigate this agent further.
+  - Unfortunately, the A2C agent's gameplay reflects its poor quantitative performance. The moves appear largely random, and it struggles to clear lines or achieve a meaningful score. We'll need to investigate this agent further.
   - `![A2C Agent Gameplay](YOUR_PATH_TO/A2C_Gameplay.gif)`
 - **PPO Agent Gameplay:**
 
-  - *Comment:* Our PPO agent exhibits a noticeable improvement over random play, attempting to make sensible placements. While it achieves respectable scores, its strategy isn't as sophisticated or high-scoring as our top-tier agents like GENETIC or DQN.
-  - `![PPO Agent Gameplay](YOUR_PATH_TO/PPO_Gameplay.gif)`
+  - Our PPO agent exhibits a noticeable improvement over random play, attempting to make sensible placements. While it achieves respectable scores, its strategy isn't as sophisticated or high-scoring as our top-tier agents like GENETIC or DQN.
+  - ![PPO Agent Gameplay](models/gifs/ppo_best_game_score_121752_ppo.gif)
 - **Evolutionary Strategies (Best Policy) Gameplay:**
 
-  - *Comment:* The ES agent displays very strong and intelligent gameplay. It consistently makes strategic decisions, leading to high scores and effective line clearing, confirming its place as one of our top-performing agents.
-  - `![ES Agent Gameplay](YOUR_PATH_TO/ES_Gameplay.gif)`
+  - The ES agent displays very strong and intelligent gameplay. It consistently makes strategic decisions, leading to high scores and effective line clearing, confirming its place as one of our top-performing agents.
+  - ![ES Agent Gameplay](models/gifs/es_best_game_score_3202750_es.gif)
 
 ## Quantitative Evaluation (Performance Metrics)
 
