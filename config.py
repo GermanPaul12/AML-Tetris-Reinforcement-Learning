@@ -5,11 +5,9 @@ import torch
 # --- General Game & Project Configuration ---
 GAME_WIDTH = 10
 GAME_HEIGHT = 20
-GAME_BLOCK_SIZE = 30  # For rendering, not directly for agent logic
+GAME_BLOCK_SIZE = 30
 STATE_SIZE = 4  # [lines_cleared_in_move, holes_after_move, bumpiness_after_move, height_after_move]
-
-
-SEED = 123  # Seed from original Tetris train.py
+SEED = 123
 PROJECT_ROOT = "."
 
 # --- Agent Types ---
@@ -19,26 +17,21 @@ AGENT_TYPES = ["random", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 
 DQN_MODEL_FILENAME = "dqn_tetris.pth"
-DQN_MODEL_PATH = os.path.join(MODEL_DIR, DQN_MODEL_FILENAME)
-
 GA_MODEL_FILENAME = "ga_best_tetris.pth"
-GA_MODEL_PATH = os.path.join(MODEL_DIR, GA_MODEL_FILENAME)
-
 REINFORCE_MODEL_FILENAME = "reinforce_tetris.pth"
-REINFORCE_MODEL_PATH = os.path.join(MODEL_DIR, REINFORCE_MODEL_FILENAME)
-
 A2C_MODEL_FILENAME = "a2c_tetris.pth"
-A2C_MODEL_PATH = os.path.join(MODEL_DIR, A2C_MODEL_FILENAME)
-
 PPO_ACTOR_MODEL_FILENAME = "ppo_actor_tetris.pth"
 PPO_CRITIC_MODEL_FILENAME = "ppo_critic_tetris.pth"
+ES_MODEL_FILENAME = "es_tetris.pth"
+EVALUATION_CSV_FILENAME = "evaluation_summary_tetris.csv"
+
+DQN_MODEL_PATH = os.path.join(MODEL_DIR, DQN_MODEL_FILENAME)
+GA_MODEL_PATH = os.path.join(MODEL_DIR, GA_MODEL_FILENAME)
+REINFORCE_MODEL_PATH = os.path.join(MODEL_DIR, REINFORCE_MODEL_FILENAME)
+A2C_MODEL_PATH = os.path.join(MODEL_DIR, A2C_MODEL_FILENAME)
 PPO_ACTOR_MODEL_PATH = os.path.join(MODEL_DIR, PPO_ACTOR_MODEL_FILENAME)
 PPO_CRITIC_MODEL_PATH = os.path.join(MODEL_DIR, PPO_CRITIC_MODEL_FILENAME)
-
-ES_MODEL_FILENAME = "es_tetris.pth"
 ES_MODEL_PATH = os.path.join(MODEL_DIR, ES_MODEL_FILENAME)
-
-EVALUATION_CSV_FILENAME = "evaluation_summary_tetris.csv"
 EVALUATION_CSV_PATH = os.path.join(MODEL_DIR, EVALUATION_CSV_FILENAME)
 
 # --- Training Configuration ---
@@ -50,19 +43,17 @@ FORCE_RETRAIN_A2C = False or FORCE_RETRAIN_ALL
 FORCE_RETRAIN_PPO = False or FORCE_RETRAIN_ALL
 FORCE_RETRAIN_ES = False or FORCE_RETRAIN_ALL
 
-# General training parameters (can be overridden per agent)
-# Tetris is episodic based on piece placement, not full games for some metrics.
-# Original Tetris DQN used "epochs" where an epoch was one piece placement + learning step.
+# --- General training parameters (can be overridden per agent) ---
 MAX_EPOCHS = 5000
-MAX_EPOCHS_OR_PIECES = 50000  # General guideline, can be more specific per agent
+MAX_EPOCHS_OR_PIECES = 50000
 PRINT_EVERY_EPOCHS = 100
-SCORE_TARGET = 1000000  # Example target score for a full game (adjust as needed)
+SCORE_TARGET = 1000000
 
-# === DQN (adapted from original Tetris train.py and LunarLander) ===
-DQN_NUM_EPOCHS = 3000  # Number of piece placements/learning updates
-DQN_MAX_T_PER_GAME_EVAL = 10000  # Max pieces for printing game scores
-DQN_PRINT_EVERY_GAMES = 10  # Print full game stats every N games
-DQN_TARGET_GAME_SCORE = 5000000  # Target score for a full game
+# === Double Q-Network (DQN) ===
+DQN_NUM_EPOCHS = 3000 
+DQN_MAX_T_PER_GAME_EVAL = 10000
+DQN_PRINT_EVERY_GAMES = 10
+DQN_TARGET_GAME_SCORE = 5000000
 
 # DQN Hyperparameters
 DQN_BUFFER_SIZE = 30000
@@ -78,29 +69,30 @@ DQN_EPSILON_DECAY_EPOCHS = 2000  # Epochs over which epsilon decays
 # DQN Network Architecture
 DQN_FC1_UNITS = 64
 DQN_FC2_UNITS = 64
-# Output is 1, as it predicts Q-value for a *given* state (which is state after action)
 
 # === Genetic Algorithm (GA) ===
-GA_N_GENERATIONS = 200  # Or whatever you set
+GA_N_GENERATIONS = 200
 GA_POPULATION_SIZE = 50
 GA_EVAL_GAMES_PER_INDIVIDUAL = 1
 GA_MAX_PIECES_PER_GA_EVAL_GAME = 100000000000
-GA_SAVE_EVERY_N_GENERATIONS = 10  # How often to save best model during training
+GA_SAVE_EVERY_N_GENERATIONS = 10
 
+# GA Hyperparameters
 GA_MUTATION_RATE = 0.1
-GA_MUTATION_STRENGTH = 0.15  # Might need tuning
+GA_MUTATION_STRENGTH = 0.15
 GA_CROSSOVER_RATE = 0.7
 GA_TOURNAMENT_SIZE = 5
 GA_ELITISM_COUNT = 2
 
+# GA Training Parameters
 GA_FC1_UNITS = 32
 GA_FC2_UNITS = 32
 
-# === Evolutionäre Strategien (ES) ===
+# === Evolutional Strategies (ES) ===
 ES_N_GENERATIONS = 300
 ES_POPULATION_SIZE = 50
 ES_SIGMA = 0.1
-ES_LEARNING_RATE = 0.005  # Might need tuning
+ES_LEARNING_RATE = 0.005
 ES_EVAL_GAMES_PER_PARAM = 1
 ES_MAX_PIECES_PER_ES_EVAL_GAME = 10000000
 ES_PRINT_EVERY_GENS = 1
@@ -119,7 +111,6 @@ REINFORCE_LEARNING_RATE = 1e-4
 REINFORCE_GAMMA = 0.99
 REINFORCE_FC1_UNITS = 128
 REINFORCE_FC2_UNITS = 128
-# Policy network output 1 (score for a given state_after_action)
 
 # === A2C ===
 A2C_TRAIN_GAMES = 50000
@@ -133,7 +124,6 @@ A2C_ENTROPY_COEFF = 0.01
 A2C_VALUE_LOSS_COEFF = 0.5
 A2C_FC1_UNITS = 64  # Shared layers
 A2C_FC2_UNITS = 64
-# Actor head outputs 1 (score for state_after_action), Critic head outputs 1 (value for state_before_action)
 
 # === PPO ===
 PPO_TOTAL_PIECES = 1000000000  # Total piece placements
@@ -157,7 +147,6 @@ PPO_ACTOR_FC2 = 64
 PPO_CRITIC_FC1 = 64  # Critic net: state_before_action -> value
 PPO_CRITIC_FC2 = 64
 
-
 # --- Test Configuration (for test.py) ---
 NUM_TEST_RUNS_GIF = 1  # Number of full games to record in one GIF
 RENDER_MODE_TEST = "rgb_array"  # For GIF: "rgb_array", for viewing: "human"
@@ -170,13 +159,10 @@ RENDER_MODE_EVAL = None  # None for faster, "human" for viewing
 
 # --- Device Configuration ---
 DEVICE = torch.device(
-    "cuda:0"
-    if torch.cuda.is_available()
-    else "mps"
-    if torch.backends.mps.is_available()
-    else "cpu"
+    "cuda:0" if torch.cuda.is_available() else 
+    "mps" if torch.backends.mps.is_available() else 
+    "cpu"
 )
-
 
 def ensure_model_dir_exists():
     if not os.path.exists(MODEL_DIR):

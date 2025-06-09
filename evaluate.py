@@ -9,9 +9,8 @@ import re
 import sys
 
 import config as tetris_config
-from agents import AGENT_REGISTRY  # Ensure this is correctly populated
-from src.tetris import Tetris  # The game environment
-
+from agents import AGENT_REGISTRY
+from src.tetris import Tetris
 
 # --- Helper Functions (Copied from train_evolutionary.py, should be in a shared util) ---
 def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):

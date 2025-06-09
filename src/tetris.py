@@ -41,7 +41,7 @@ class Tetris:
         [[7, 0, 0], [7, 7, 7]], # J piece
     ]
 
-    def __init__(self, height:int=20, width:int=10, block_size:int=20) -> None:
+    def __init__(self, height:int=20, width:int=10, block_size:int=30) -> None:
         """Initialize the Tetris game with specified height, width, and block size.
         Args:
             height (int, optional): Height of the Tetris board. Defaults to 20.
