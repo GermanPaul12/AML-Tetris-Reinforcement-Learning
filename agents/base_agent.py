@@ -1,17 +1,18 @@
 # tetris_rl_agents/agents/base_agent.py
+from abc import ABC, abstractmethod
 import torch
 from src.tetris import Tetris # For type hinting
 
-class BaseAgent:
+class BaseAgent(ABC):
     def __init__(self, state_size):
         """
         Args:
             state_size (int): The number of features in the state representation.
         """
         self.state_size = state_size
-        # Common attributes agents might have, can be overridden or extended
-        self.last_loss = None # For logging loss from train.py
+        self.last_loss = None
 
+    @abstractmethod
     def select_action(self, current_board_features: torch.Tensor, 
                       tetris_game_instance: Tetris, 
                       epsilon_override: float = None) -> tuple:
@@ -35,8 +36,9 @@ class BaseAgent:
                     'all_available_s_prime_features': List of features for all possible next states.
                     'chosen_action_index': Index of the chosen action among possible next states.
         """
-        raise NotImplementedError("Subclasses must implement select_action.")
+        pass
 
+    @abstractmethod
     def learn(self, state_features: torch.Tensor, action_tuple: tuple, reward: float, 
               next_state_features: torch.Tensor, done: bool, 
               game_instance_at_s = None, game_instance_at_s_prime = None, # For agents needing full game state
@@ -55,32 +57,28 @@ class BaseAgent:
             game_instance_at_s_prime (Tetris, optional): Full Tetris game instance at state S_{t+1}.
             aux_info (dict, optional): Auxiliary information dictionary returned by select_action.
         """
-        pass # Default implementation does nothing; override in subclasses.
-
-    def learn_episode(self):
-        """
-        Called at the end of a full episode (game).
-        Useful for episodic learning algorithms like REINFORCE.
-        """
-        pass # Default implementation does nothing.
-
+        pass
+    
+    @abstractmethod
     def reset(self):
         """
         Called at the start of each new game/episode by the training loop.
         Allows the agent to reset any internal episodic state.
         """
         pass # Default implementation does nothing.
-
+    
+    @abstractmethod
     def save(self, filename_primary=None, filename_secondary=None):
         """
         Saves the agent's model(s).
         PPO might use filename_primary for actor and filename_secondary for critic.
         Other agents might only use filename_primary.
         """
-        raise NotImplementedError("Subclasses must implement save.")
+        pass
 
+    @abstractmethod
     def load(self, filename_primary=None, filename_secondary=None):
         """
         Loads the agent's model(s).
         """
-        raise NotImplementedError("Subclasses must implement load.")
+        pass

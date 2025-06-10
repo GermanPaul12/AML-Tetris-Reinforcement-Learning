@@ -50,6 +50,7 @@ class VNetwork(nn.Module):
 
 # --- Replay Buffer --- (No change from previous V-learning version)
 Experience = namedtuple("Experience", field_names=["s_t_features", "s_prime_chosen_features", "reward", "done"])
+
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size, seed):
         self.memory = deque(maxlen=buffer_size)

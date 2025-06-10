@@ -234,7 +234,6 @@ def main_interactive_loop():
             print("Exiting application.")
             break
 
-
 if __name__ == "__main__":
     print("Welcome to the Tetris RL Agents Manager!")
     tetris_config.ensure_model_dir_exists()

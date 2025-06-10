@@ -1,99 +1,32 @@
-# tetris_rl_agents/train_onpolicy.py
-import argparse
-import os
-import random
-import re
-import numpy as np
-import torch
-import time
+# AML-TETRIS-RL/train_onpolicy.py
 
+import os
+import time
+import argparse
 import config as tetris_config
+
 from agents import AGENT_REGISTRY
+from helper import *
 from src.tetris import Tetris
 
-
-# --- Helper Functions for Model Saving (Copied from train_dqn_reinforce.py or a shared utils.py) ---
-def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
-    processed_agent_type = agent_type_str.replace("_", "-")
-    if agent_type_str == "ppo":
-        if is_actor:
-            return "ppo-actor"
-        elif is_critic:
-            return "ppo-critic"
-        else:
-            return "ppo-model"  # Should not be hit if saving actor/critic
-    return processed_agent_type
-
-
-def parse_score_from_filename(filename_basename, expected_prefix):
-    pattern = re.compile(f"^{re.escape(expected_prefix)}_score_(\\d+)\\.pth$")
-    match = pattern.match(filename_basename)
-    if match:
-        try:
-            return int(match.group(1))
-        except ValueError:
-            return None
-    return None
-
-
-def find_best_existing_score(agent_prefix, model_dir):
-    max_score = -1
-    if not os.path.isdir(model_dir):
-        try:
-            os.makedirs(model_dir, exist_ok=True)
-        except OSError:
-            print(
-                f"Warning: Model directory {model_dir} does not exist and could not be created."
-            )
-            return max_score
-    for filename in os.listdir(model_dir):
-        score_from_file = parse_score_from_filename(
-            filename, agent_prefix
-        )  # Renamed to avoid conflict
-        if score_from_file is not None and score_from_file > max_score:
-            max_score = score_from_file
-    return max_score
-
-
-# --- End Helper Functions ---
-
-
-def get_args():
+def get_args() -> argparse.Namespace:
+    """Parses command-line arguments for training configuration."""
     parser = argparse.ArgumentParser("""Train A2C or PPO Agents for Tetris""")
     parser.add_argument("--agent_type", type=str, default="ppo", choices=["a2c", "ppo"])
-    parser.add_argument(
-        "--total_steps",
-        type=int,
-        default=None,
-        help="Total environment steps to train for.",
-    )
-    parser.add_argument(
-        "--num_games",
-        type=int,
-        default=None,
-        help="Alternative: Total number of games to complete training.",
-    )
+    parser.add_argument("--total_steps", type=int, default=None, help="Total environment steps to train for.")
+    parser.add_argument("--num_games", type=int, default=None, help="Alternative: Total number of games to complete training.")
     parser.add_argument("--render_game", action="store_true", help="Render the game.")
-    parser.add_argument(
-        "--print_every_games",
-        type=int,
-        default=10,
-        help="Frequency of printing average scores (in games).",
-    )
+    parser.add_argument("--print_every_games", type=int, default=10, help="Frequency of printing average scores (in games).")
     return parser.parse_args()
 
+#################################################
+# Main Training Function for A2C and PPO Agents #
+#################################################
 
 def train():
     opt = get_args()
     tetris_config.ensure_model_dir_exists()
-
-    # --- Seeding ---
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(tetris_config.SEED)
-    else:
-        torch.manual_seed(tetris_config.SEED)
-    random.seed(tetris_config.SEED)
-    np.random.seed(tetris_config.SEED)
+    setup_seeds() # Set random seeds for reproducibility
 
     env = Tetris(
         width=tetris_config.GAME_WIDTH,
@@ -114,14 +47,10 @@ def train():
     max_games = opt.num_games
     if max_steps is None and max_games is None:
         if opt.agent_type == "ppo":
-            max_steps = getattr(
-                tetris_config, "PPO_TOTAL_PIECES", 2000000
-            )  # Increased default
+            max_steps = getattr(tetris_config, "PPO_TOTAL_PIECES", 2000000)  # Increased default
             print(f"Using PPO_TOTAL_PIECES from config for max_steps: {max_steps}")
         elif opt.agent_type == "a2c":
-            max_games = getattr(
-                tetris_config, "A2C_TRAIN_GAMES", 10000
-            )  # Increased default
+            max_games = getattr(tetris_config, "A2C_TRAIN_GAMES", 10000)  # Increased default
             print(f"Using A2C_TRAIN_GAMES from config for max_games: {max_games}")
         else:
             max_steps = 2000000
