@@ -12,16 +12,13 @@ import config as tetris_config
 from agents import AGENT_REGISTRY
 from src.tetris import Tetris
 
-# --- Helper Functions (Copied from train_evolutionary.py, should be in a shared util) ---
+# --- Helper Functions ---
 def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
     processed_agent_type = agent_type_str.replace("_", "-")
     if agent_type_str == "ppo":
-        if is_actor:
-            return "ppo-actor"
-        elif is_critic:
-            return "ppo-critic"
-        else:
-            return "ppo-model"
+        if is_actor: return "ppo-actor"
+        elif is_critic: return "ppo-critic"
+        else: return "ppo-model"
     if agent_type_str == "genetic":
         return "genetic"
     if agent_type_str == "es":
@@ -106,9 +103,7 @@ def find_latest_or_best_model_path(agent_type_str, model_dir):
 
     return None
 
-
 # --- End Helper Functions ---
-
 
 def setup_seeds(seed):
     torch.manual_seed(seed)
@@ -118,58 +113,29 @@ def setup_seeds(seed):
     random.seed(seed)
     # print(f"Evaluation seeds set to: {seed}") # Optional: for debugging
 
+def run_evaluation_game(env: Tetris, agent):
+    current_board_features = env.reset()
 
-def run_evaluation_game(env: Tetris, agent, game_seed_for_env_reset_unused):
-    # env.reset() will use its own internal randomization or previously set global seed
-    initial_total_lines = env.cleared_lines  # Store cumulative lines before this game
-    initial_total_tetrominoes = env.tetrominoes  # Store cumulative tetrominoes
+    if tetris_config.DEVICE.type == "cuda": current_board_features = current_board_features.cuda()
+    agent.reset()
 
-    current_board_features = env.reset()  # This resets env.score, env.tetrominoes_this_game, env.lines_cleared_this_game IF THEY EXIST
-    # Since they don't, env.score, env.cleared_lines, env.tetrominoes are reset by env.reset()
-
-    # If Tetris.reset() doesn't reset its own score, lines, tetrominoes to 0, we need to adjust.
-    # Assuming Tetris.reset() correctly resets these for a new game scenario.
-    # If not, then `game_score = env.score - initial_score_for_this_instance` would be needed.
-    # For now, assume Tetris.reset() correctly sets env.score to 0 for a new game.
-
-    if tetris_config.DEVICE.type == "cuda":
-        current_board_features = current_board_features.cuda()
-    if hasattr(agent, "reset"):
-        agent.reset()
-
-    game_score_this_eval_run = 0  # This will be the true score for THIS evaluation game
+    game_score_this_eval_run = 0
     game_over = False
     pieces_played_this_eval_run = 0
 
-    while (
-        not game_over
-        and pieces_played_this_eval_run < tetris_config.MAX_PIECES_PER_EVAL_GAME
-    ):
-        action_tuple, _ = agent.select_action(
-            current_board_features, env, epsilon_override=0.0
-        )
+    while (not game_over and pieces_played_this_eval_run < tetris_config.MAX_PIECES_PER_EVAL_GAME):
+        action_tuple, _ = agent.select_action(current_board_features, env, epsilon_override=0.0)
 
-        should_render_this_step = tetris_config.RENDER_MODE_EVAL == "human"
-        # The reward from env.step is the incremental score for that step
-        reward_for_step, game_over = env.step(
-            action_tuple, render=should_render_this_step
-        )
+        render = (tetris_config.RENDER_MODE_EVAL == "human")
+        reward_for_step, game_over = env.step(action_tuple, render=render)
 
-        game_score_this_eval_run += int(reward_for_step)
+        game_score_this_eval_run += reward_for_step
         pieces_played_this_eval_run += 1
 
         if not game_over:
             current_board_features = env.get_state_properties(env.board)
             if tetris_config.DEVICE.type == "cuda":
                 current_board_features = current_board_features.cuda()
-
-        if should_render_this_step and hasattr(
-            env, "render"
-        ):  # Check if render is callable if it uses OpenCV
-            if (
-                "cv2" in sys.modules
-            ):  # Only if cv2 is imported by tetris.py for rendering
-                sys.modules["cv2"].waitKey(1)
 
     return env.score, pieces_played_this_eval_run, env.tetrominoes, env.cleared_lines
 
@@ -187,35 +153,25 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
     model_load_path = None
 
     if agent_type_to_load == "ppo":
-        actor_path, critic_path = find_latest_or_best_model_path(
-            agent_type_to_load, model_base_dir
-        )
+        actor_path, critic_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
     elif agent_type_to_load != "random":
-        model_load_path = find_latest_or_best_model_path(
-            agent_type_to_load, model_base_dir
-        )
+        model_load_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
 
     try:
         if agent_type_to_load == "random":
             print("Initializing Random Agent for evaluation (no model to load).")
         elif agent_type_to_load == "ppo":
             if actor_path and critic_path:
-                print(f"  Attempting to load PPO Actor: {os.path.basename(actor_path)}")
-                print(
-                    f"  Attempting to load PPO Critic: {os.path.basename(critic_path)}"
-                )
+                print(f"Attempting to load PPO Actor: {os.path.basename(actor_path)}")
+                print(f"Attempting to load PPO Critic: {os.path.basename(critic_path)}")
                 agent_instance.load(actor_path, critic_path)
             else:
-                print(
-                    f"  PPO model files not found in {model_base_dir}. Evaluating untrained PPO."
-                )
+                print(f"PPO model files not found in {model_base_dir}. Evaluating untrained PPO.")
         elif model_load_path:
-            print(f"  Attempting to load model: {os.path.basename(model_load_path)}")
+            print(f"Attempting to load model: {os.path.basename(model_load_path)}")
             agent_instance.load(model_load_path)
         elif agent_type_to_load != "random":
-            print(
-                f"  No model file found for {agent_type_to_load.upper()} in {model_base_dir}. Evaluating untrained agent."
-            )
+            print(f"No model file found for {agent_type_to_load.upper()} in {model_base_dir}. Evaluating untrained agent.")
 
         # Set networks to eval mode
         networks_to_eval = [
@@ -231,11 +187,7 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
         for net_name in networks_to_eval:
             if hasattr(agent_instance, net_name):
                 network = getattr(agent_instance, net_name)
-                if (
-                    network is not None
-                    and hasattr(network, "eval")
-                    and callable(network.eval)
-                ):
+                if (network is not None and hasattr(network, "eval") and callable(network.eval)):
                     network.eval()
 
         # Special handling for GA if AGENT_REGISTRY points to controller
@@ -244,17 +196,12 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
             if hasattr(agent_instance, "get_best_policy_network"):
                 best_ga_net = agent_instance.get_best_policy_network()
                 if best_ga_net:
-                    # Create the GeneticAgent wrapper for evaluation
                     from agents.genetic_agent import GeneticAgent as GeneticAgentWrapper
 
-                    eval_agent = GeneticAgentWrapper(
-                        state_size, policy_network_instance=best_ga_net
-                    )
+                    eval_agent = GeneticAgentWrapper(state_size, policy_network_instance=best_ga_net)
                     return eval_agent
                 else:
-                    print(
-                        "  GA Controller loaded, but no best network found. Evaluating untrained genetic wrapper."
-                    )
+                    print("GA Controller loaded, but no best network found. Evaluating untrained genetic wrapper.")
                     from agents.genetic_agent import GeneticAgent as GeneticAgentWrapper
 
                     return GeneticAgentWrapper(
@@ -282,85 +229,44 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate pre-trained Tetris agents.")
-    parser.add_argument(
-        "--agent_types",
-        type=str,
-        default="all",
-        help="Comma-separated list of agent types or 'all'.",
-    )
-    parser.add_argument(
-        "--num_eval_games",
-        type=int,
-        default=tetris_config.NUM_EVAL_GAMES,
-        help="Number of games for evaluation.",
-    )
+    parser.add_argument("--agent_types", type=str, default="all", help="Comma-separated list of agent types or 'all'.")
+    parser.add_argument("--num_eval_games", type=int, default=tetris_config.NUM_EVAL_GAMES, help="Number of games for evaluation.")
     args = parser.parse_args()
 
     model_base_dir = tetris_config.MODEL_DIR
-    tetris_config.ensure_model_dir_exists()
-
-    eval_master_seed = tetris_config.SEED + 300
+    eval_master_seed = tetris_config.SEED + 300 # Unique seed for evaluation to avoid conflicts with training seeds
 
     env = Tetris(
         width=tetris_config.GAME_WIDTH,
         height=tetris_config.GAME_HEIGHT,
         block_size=tetris_config.GAME_BLOCK_SIZE,
     )
-    state_size = tetris_config.STATE_SIZE
 
     if args.agent_types.lower() == "all":
-        # Ensure AGENT_REGISTRY keys are lowercase for consistent matching
-        agent_types_to_evaluate = [
-            agt for agt in tetris_config.AGENT_TYPES if agt.lower() in AGENT_REGISTRY
-        ]
+        agent_types_to_evaluate = [agent.lower() for agent in tetris_config.AGENT_TYPES if agent.lower() in AGENT_REGISTRY]
     else:
-        agent_types_to_evaluate = [
-            a.strip().lower()
-            for a in args.agent_types.split(",")
-            if a.strip().lower() in AGENT_REGISTRY
-        ]
+        agent_types_to_evaluate = [a.strip().lower() for a in args.agent_types.split(",") if a.strip().lower() in AGENT_REGISTRY]
 
     evaluation_summary = []
 
-    for agent_type_raw in agent_types_to_evaluate:
-        agent_type = agent_type_raw.lower()
+    for agent_type in agent_types_to_evaluate:
+        setup_seeds(eval_master_seed)
 
-        current_agent_master_seed = eval_master_seed + sum(ord(c) for c in agent_type)
-        setup_seeds(current_agent_master_seed)
-
-        agent = load_agent_for_eval(agent_type, state_size, model_base_dir)
+        agent = load_agent_for_eval(agent_type, tetris_config.STATE_SIZE, model_base_dir)
         if not agent:
-            print(
-                f"Skipping evaluation for {agent_type.upper()} due to loading issues."
-            )
+            print(f"Skipping evaluation for {agent_type.upper()} due to loading issues.")
             continue
 
-        agent_scores, agent_pieces_played, agent_tetrominoes, agent_lines_cleared = (
-            [],
-            [],
-            [],
-            [],
-        )  # Use distinct names
+        agent_scores, agent_pieces_played, agent_tetrominoes, agent_lines_cleared = ([], [], [], [])
         print(f"\nEvaluating {agent_type.upper()} for {args.num_eval_games} games...")
 
         for i_game in range(args.num_eval_games):
-            # The env.reset() is called inside run_evaluation_game.
-            # Seeding for piece sequence consistency per game (if Tetris uses random.shuffle on a fixed bag):
-            # random.seed(current_agent_master_seed + i_game + 1) # +1 to differ from agent init seed
-
-            # run_evaluation_game returns: score, pieces_in_this_game, tetrominoes_in_this_game, lines_in_this_game
-            score, pieces, tetrominoes_val, lines_val = run_evaluation_game(
-                env, agent, 0
-            )
+            score, pieces, tetrominoes_val, lines_val = run_evaluation_game(env, agent)
             agent_scores.append(score)
-            agent_pieces_played.append(
-                pieces
-            )  # Use the pieces played in this specific game
+            agent_pieces_played.append(pieces)
             agent_tetrominoes.append(tetrominoes_val)
             agent_lines_cleared.append(lines_val)
-            print(
-                f"  Game {i_game + 1}/{args.num_eval_games}: Score={score}, Pieces={pieces}, Lines={lines_val}"
-            )
+            print(f"  Game {i_game + 1}/{args.num_eval_games}: Score={score}, Pieces={pieces}, Lines={lines_val}")
 
         stats = {
             "Agent": agent_type.upper(),

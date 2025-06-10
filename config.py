@@ -10,11 +10,36 @@ STATE_SIZE = 4  # [lines_cleared_in_move, holes_after_move, bumpiness_after_move
 SEED = 123
 PROJECT_ROOT = "."
 
+# --- Test Configuration (for test.py) ---
+NUM_TEST_RUNS_GIF = 1  # Number of full games to record in one GIF
+RENDER_MODE_TEST = "rgb_array"  # For GIF: "rgb_array", for viewing: "human"
+GIF_FPS = 300
+
+# --- Evaluation Configuration (for evaluate.py) ---
+NUM_EVAL_GAMES = 20  # Number of full games for final evaluation
+MAX_PIECES_PER_EVAL_GAME = 1000000000
+RENDER_MODE_EVAL = "None"  # None for faster, "human" for viewing
+
+# --- Device Configuration ---
+DEVICE = torch.device(
+    "cuda:0" if torch.cuda.is_available() else 
+    "mps" if torch.backends.mps.is_available() else 
+    "cpu"
+)
+
 # --- Agent Types ---
 AGENT_TYPES = ["random", "dqn", "genetic", "reinforce", "a2c", "ppo", "es"]
 
 # --- Model Paths & Directories ---
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
+
+def ensure_model_dir_exists():
+    if not os.path.exists(MODEL_DIR):
+        try:
+            os.makedirs(MODEL_DIR)
+            print(f"Model directory created: {MODEL_DIR}")
+        except OSError as e:
+            print(f"Error creating model directory {MODEL_DIR}: {e}")
 
 DQN_MODEL_FILENAME = "dqn_tetris.pth"
 GA_MODEL_FILENAME = "ga_best_tetris.pth"
@@ -48,6 +73,7 @@ MAX_EPOCHS = 5000
 MAX_EPOCHS_OR_PIECES = 50000
 PRINT_EVERY_EPOCHS = 100
 SCORE_TARGET = 1000000
+EARLY_STOPPING_TARGET_SCORE = 1000000
 
 # === Double Q-Network (DQN) ===
 DQN_NUM_EPOCHS = 3000 
@@ -146,28 +172,3 @@ PPO_ACTOR_FC1 = 64  # Actor net: state_after_action -> score
 PPO_ACTOR_FC2 = 64
 PPO_CRITIC_FC1 = 64  # Critic net: state_before_action -> value
 PPO_CRITIC_FC2 = 64
-
-# --- Test Configuration (for test.py) ---
-NUM_TEST_RUNS_GIF = 1  # Number of full games to record in one GIF
-RENDER_MODE_TEST = "rgb_array"  # For GIF: "rgb_array", for viewing: "human"
-GIF_FPS = 300
-
-# --- Evaluation Configuration (for evaluate.py) ---
-NUM_EVAL_GAMES = 20  # Number of full games for final evaluation
-MAX_PIECES_PER_EVAL_GAME = 1000000000
-RENDER_MODE_EVAL = None  # None for faster, "human" for viewing
-
-# --- Device Configuration ---
-DEVICE = torch.device(
-    "cuda:0" if torch.cuda.is_available() else 
-    "mps" if torch.backends.mps.is_available() else 
-    "cpu"
-)
-
-def ensure_model_dir_exists():
-    if not os.path.exists(MODEL_DIR):
-        try:
-            os.makedirs(MODEL_DIR)
-            print(f"Model directory created: {MODEL_DIR}")
-        except OSError as e:
-            print(f"Error creating model directory {MODEL_DIR}: {e}")

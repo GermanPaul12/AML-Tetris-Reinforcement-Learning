@@ -406,6 +406,15 @@ class PPOAgent(BaseAgent):
         for key in self.memory:
             self.memory[key] = []
 
+    def reset(self):
+        """
+        Reset the agent's memory and last loss.
+        This is called at the start of each new episode.
+        """
+        self.clear_memory()
+        self.last_loss = {}
+        print("PPO Agent memory cleared and ready for a new episode.")
+    
     def save(self, filename_actor=None, filename_critic=None):
         path_actor = (
             filename_actor if filename_actor else global_config.PPO_ACTOR_MODEL_PATH

@@ -111,18 +111,14 @@ class REINFORCEAgent(BaseAgent):
             "entropy": entropy,  # Though REINFORCE doesn't typically use entropy bonus
         }
 
-    def learn(
-        self, state_features, action_tuple, reward, next_state_features, done, aux_info
-    ):
+    def learn(self, state_features, action_tuple, reward, next_state_features, done, aux_info):
         # This method is called after every step by train_dqn_reinforce.py
         # It stores the reward and the log_prob of the action taken.
         if aux_info and "log_prob" in aux_info:
             self.rewards.append(reward)
             self.saved_log_probs.append(aux_info["log_prob"])
         else:
-            print(
-                "Warning: REINFORCEAgent.learn() called without log_prob in aux_info."
-            )
+            print("Warning: REINFORCEAgent.learn() called without log_prob in aux_info.")
 
     def learn_episode(self):
         # Called at the end of an episode by train_dqn_reinforce.py
@@ -159,9 +155,7 @@ class REINFORCEAgent(BaseAgent):
         # self.last_loss = None # Reset in train_dqn_reinforce.py on game_over after printing
 
     def save(self, filename_primary=None, filename_secondary=None):
-        path = (
-            filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH
-        )
+        path = (filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(
             {
@@ -174,9 +168,7 @@ class REINFORCEAgent(BaseAgent):
         print(f"REINFORCE Agent saved to {path}")
 
     def load(self, filename_primary=None, filename_secondary=None):
-        path = (
-            filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH
-        )
+        path = (filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH)
         if os.path.exists(path):
             checkpoint = torch.load(path, map_location=DEVICE)
             self.policy_network.load_state_dict(checkpoint["policy_network_state_dict"])
@@ -184,8 +176,6 @@ class REINFORCEAgent(BaseAgent):
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
             self.episodes_done = checkpoint.get("episodes_done", 0)
             self.policy_network.train()  # Set to train mode
-            print(
-                f"REINFORCE Agent loaded from {path}. Episodes trained: {self.episodes_done}"
-            )
+            print(f"REINFORCE Agent loaded from {path}. Episodes trained: {self.episodes_done}")
         else:
             print(f"ERROR: No REINFORCE model found at {path}.")
