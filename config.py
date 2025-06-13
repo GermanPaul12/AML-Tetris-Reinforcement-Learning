@@ -6,19 +6,20 @@ import torch
 GAME_WIDTH = 10
 GAME_HEIGHT = 20
 GAME_BLOCK_SIZE = 30
-STATE_SIZE = 4  # [lines_cleared_in_move, holes_after_move, bumpiness_after_move, height_after_move]
+STATE_SIZE = 4          # [lines_cleared_in_move, holes_after_move, bumpiness_after_move, height_after_move]
+ACTION_SIZE = 1         # For Tetris, we only need to predict the score after placing the piece
 SEED = 123
 PROJECT_ROOT = "."
 
 # --- Test Configuration (for test.py) ---
-NUM_TEST_RUNS_GIF = 1  # Number of full games to record in one GIF
+NUM_TEST_RUNS_GIF = 1           # Number of full games to record in one GIF
 RENDER_MODE_TEST = "rgb_array"  # For GIF: "rgb_array", for viewing: "human"
 GIF_FPS = 300
 
 # --- Evaluation Configuration (for evaluate.py) ---
-NUM_EVAL_GAMES = 20  # Number of full games for final evaluation
+NUM_EVAL_GAMES = 20                     # Number of full games for final evaluation
 MAX_PIECES_PER_EVAL_GAME = 1000000000
-RENDER_MODE_EVAL = "None"  # None for faster, "human" for viewing
+RENDER_MODE_EVAL = "None"               # None for faster, "human" for viewing
 
 # --- Device Configuration ---
 DEVICE = torch.device(
@@ -45,6 +46,7 @@ DQN_MODEL_FILENAME = "dqn_tetris.pth"
 GA_MODEL_FILENAME = "ga_best_tetris.pth"
 REINFORCE_MODEL_FILENAME = "reinforce_tetris.pth"
 A2C_MODEL_FILENAME = "a2c_tetris.pth"
+PPO_MODEL_FILENAME = "ppo_tetris.pth"
 PPO_ACTOR_MODEL_FILENAME = "ppo_actor_tetris.pth"
 PPO_CRITIC_MODEL_FILENAME = "ppo_critic_tetris.pth"
 ES_MODEL_FILENAME = "es_tetris.pth"
@@ -54,19 +56,11 @@ DQN_MODEL_PATH = os.path.join(MODEL_DIR, DQN_MODEL_FILENAME)
 GA_MODEL_PATH = os.path.join(MODEL_DIR, GA_MODEL_FILENAME)
 REINFORCE_MODEL_PATH = os.path.join(MODEL_DIR, REINFORCE_MODEL_FILENAME)
 A2C_MODEL_PATH = os.path.join(MODEL_DIR, A2C_MODEL_FILENAME)
+PPO_MODEL_PATH = os.path.join(MODEL_DIR, PPO_MODEL_FILENAME)
 PPO_ACTOR_MODEL_PATH = os.path.join(MODEL_DIR, PPO_ACTOR_MODEL_FILENAME)
 PPO_CRITIC_MODEL_PATH = os.path.join(MODEL_DIR, PPO_CRITIC_MODEL_FILENAME)
 ES_MODEL_PATH = os.path.join(MODEL_DIR, ES_MODEL_FILENAME)
 EVALUATION_CSV_PATH = os.path.join(MODEL_DIR, EVALUATION_CSV_FILENAME)
-
-# --- Training Configuration ---
-FORCE_RETRAIN_ALL = False
-FORCE_RETRAIN_DQN = False or FORCE_RETRAIN_ALL
-FORCE_RETRAIN_GA = False or FORCE_RETRAIN_ALL
-FORCE_RETRAIN_REINFORCE = False or FORCE_RETRAIN_ALL
-FORCE_RETRAIN_A2C = False or FORCE_RETRAIN_ALL
-FORCE_RETRAIN_PPO = False or FORCE_RETRAIN_ALL
-FORCE_RETRAIN_ES = False or FORCE_RETRAIN_ALL
 
 # --- General training parameters (can be overridden per agent) ---
 MAX_EPOCHS = 5000
@@ -74,6 +68,7 @@ MAX_EPOCHS_OR_PIECES = 50000
 PRINT_EVERY_EPOCHS = 100
 SCORE_TARGET = 1000000
 EARLY_STOPPING_TARGET_SCORE = 1000000
+FC_UNITS = 64
 
 # === Double Q-Network (DQN) ===
 DQN_NUM_EPOCHS = 3000 
@@ -144,11 +139,11 @@ A2C_MAX_PIECES_PER_GAME = 10000000000
 A2C_PRINT_EVERY_GAMES = 10
 A2C_TARGET_GAME_SCORE = 1000000
 
-A2C_LEARNING_RATE = 7e-4
+A2C_LEARNING_RATE = 1e-4
 A2C_GAMMA = 0.99
 A2C_ENTROPY_COEFF = 0.01
 A2C_VALUE_LOSS_COEFF = 0.5
-A2C_FC1_UNITS = 64  # Shared layers
+A2C_FC1_UNITS = 64
 A2C_FC2_UNITS = 64
 
 # === PPO ===
@@ -168,7 +163,7 @@ PPO_GAE_LAMBDA = 0.95
 PPO_CLIP_EPSILON = 0.2
 PPO_ENTROPY_COEFF = 0.01
 PPO_VALUE_LOSS_COEFF = 0.5
-PPO_ACTOR_FC1 = 64  # Actor net: state_after_action -> score
+PPO_ACTOR_FC1 = 64
 PPO_ACTOR_FC2 = 64
-PPO_CRITIC_FC1 = 64  # Critic net: state_before_action -> value
+PPO_CRITIC_FC1 = 64
 PPO_CRITIC_FC2 = 64

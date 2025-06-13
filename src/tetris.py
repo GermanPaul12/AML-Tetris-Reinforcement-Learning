@@ -1,5 +1,6 @@
 """
 @original author: Viet Nguyen <nhviet1009@gmail.com>
+@refactoring author: Michael Greif <Greifenhard>
 
 Refactored for this RL-Project:
 - Added docstrings for class and methods
@@ -46,7 +47,7 @@ class Tetris:
         Args:
             height (int, optional): Height of the Tetris board. Defaults to 20.
             width (int, optional): Width of the Tetris board. Defaults to 10.
-            block_size (int, optional): Blocksize for tetrominoes. Defaults to 20.
+            block_size (int, optional): Blocksize for tetrominoes. Defaults to 30.
         """
         self.height = height
         self.width = width
@@ -55,6 +56,7 @@ class Tetris:
             (self.height * self.block_size, self.width * int(self.block_size / 2), 3),
             dtype=np.uint8,
         ) * np.array([204, 204, 255], dtype=np.uint8)
+        self.text_color = (200, 20, 220)
         self.reset()
 
     def reset(self) -> torch.FloatTensor:
@@ -134,7 +136,7 @@ class Tetris:
     def get_next_states(self) -> Dict[Tuple[int, int], torch.FloatTensor]:
         """Generate all possible next states for the current piece in the Tetris game.
         Returns:
-            dict ({Tuple[int,int] = torch.FloatTensor}): A dictionary where keys are tuples of (x, rotation) and values are the state properties of the board.
+            dict ({Tuple[int,int], torch.FloatTensor}): A dictionary where keys are tuples of (x, rotation) and values are the state properties of the board.
         """
         states = {}
         piece_id = self.ind
@@ -239,7 +241,7 @@ class Tetris:
                     board[y + pos["y"]][x + pos["x"]] = piece[y][x]
         return board
 
-    def remove_row(self, board:list[list[int]], indices:list) -> list:
+    def remove_row(self, board:list[list[int]], indices:list) -> list[list[int]]:
         """Remove specified rows from the Tetris board and shift the remaining rows down.
         Args:
             board (list): The current state of the Tetris board.
@@ -311,10 +313,9 @@ class Tetris:
         Args:
             video (bool, optional): If True, saves the rendered frame to a video file. Defaults to False.
         """
-        if not self.gameover:
-            img = [self.piece_colors[p] for row in self.get_current_board_state() for p in row]
-        else:
-            img = [self.piece_colors[p] for row in self.board for p in row]
+        if not self.gameover: img = [self.piece_colors[p] for row in self.get_current_board_state() for p in row]
+        else: img = [self.piece_colors[p] for row in self.board for p in row]
+        
         img = np.array(img).reshape((self.height, self.width, 3)).astype(np.uint8)
         img = img[..., ::-1]
         img = Image.fromarray(img, "RGB")
@@ -326,7 +327,7 @@ class Tetris:
         img = np.concatenate((img, self.extra_board), axis=1)
 
         def putText(img, text, org):
-            cv2.putText(img, text, org, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=(200, 20, 220))
+            cv2.putText(img, text, org, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.0, color=self.text_color)
         
         putText(img, "Score:", (self.width * self.block_size + int(self.block_size / 2), self.block_size))
         putText(img, str(self.score), (self.width * self.block_size + int(self.block_size / 2), 2 * self.block_size))
@@ -337,8 +338,7 @@ class Tetris:
         putText(img, "Lines:", (self.width * self.block_size + int(self.block_size / 2), 7 * self.block_size))
         putText(img, str(self.cleared_lines), (self.width * self.block_size + int(self.block_size / 2), 8 * self.block_size))
         
-        if video:
-            video.write(img)
+        if video: video.write(img)
 
-        cv2.imshow("Deep Q-Learning Tetris", img)
+        cv2.imshow("RL Tetris", img)
         cv2.waitKey(1)

@@ -1,117 +1,16 @@
 # tetris_rl_agents/evaluate.py
 import os
-import random
-import numpy as np
-import torch
 import csv
 import argparse
-import re
-import sys
+import traceback
+import numpy as np
 
+from helper import *
 import config as tetris_config
 from agents import AGENT_REGISTRY
 from src.tetris import Tetris
 
-# --- Helper Functions ---
-def get_agent_file_prefix(agent_type_str, is_actor=False, is_critic=False):
-    processed_agent_type = agent_type_str.replace("_", "-")
-    if agent_type_str == "ppo":
-        if is_actor: return "ppo-actor"
-        elif is_critic: return "ppo-critic"
-        else: return "ppo-model"
-    if agent_type_str == "genetic":
-        return "genetic"
-    if agent_type_str == "es":
-        return "es"
-    return processed_agent_type
-
-
-def parse_score_from_filename(filename_basename, expected_prefix):
-    pattern_score = re.compile(f"^{re.escape(expected_prefix)}_score_(\\d+)\\.pth$")
-    match = pattern_score.match(filename_basename)
-    if match:
-        try:
-            return int(match.group(1))
-        except ValueError:
-            return None
-    return None
-
-
-def find_latest_or_best_model_path(agent_type_str, model_dir):
-    best_score = -1
-
-    if not os.path.isdir(model_dir):
-        print(
-            f"Warning: Model directory {model_dir} does not exist for find_latest_or_best_model_path."
-        )
-        return (None, None) if agent_type_str == "ppo" else None
-
-    if agent_type_str == "ppo":
-        actor_prefix = get_agent_file_prefix(agent_type_str, is_actor=True)
-        critic_prefix = get_agent_file_prefix(agent_type_str, is_critic=True)
-        potential_ppo_models = {}
-
-        for filename in os.listdir(model_dir):
-            if filename.startswith(actor_prefix) and filename.endswith(".pth"):
-                score_str = filename.replace(f"{actor_prefix}_score_", "").replace(
-                    ".pth", ""
-                )
-                try:
-                    score = int(score_str)
-                    critic_filename = f"{critic_prefix}_score_{score}.pth"
-                    actor_full_path = os.path.join(model_dir, filename)
-                    critic_full_path = os.path.join(model_dir, critic_filename)
-                    if os.path.exists(critic_full_path):
-                        mtime = os.path.getmtime(actor_full_path)
-                        if (
-                            score not in potential_ppo_models
-                            or mtime > potential_ppo_models[score][2]
-                        ):
-                            potential_ppo_models[score] = (
-                                actor_full_path,
-                                critic_full_path,
-                                mtime,
-                            )
-                except ValueError:
-                    continue
-
-        if potential_ppo_models:
-            best_score = max(potential_ppo_models.keys())
-            return potential_ppo_models[best_score][:2]
-        return None, None
-
-    agent_prefix = get_agent_file_prefix(agent_type_str)
-    found_files_with_scores = []  # list of (score, path, mtime)
-    found_files_no_scores = []  # list of (path, mtime)
-
-    for filename in os.listdir(model_dir):
-        if filename.startswith(agent_prefix) and filename.endswith(".pth"):
-            score = parse_score_from_filename(filename, agent_prefix)
-            file_path = os.path.join(model_dir, filename)
-            mtime = os.path.getmtime(file_path)
-            if score is not None:
-                found_files_with_scores.append((score, file_path, mtime))
-            else:
-                found_files_no_scores.append((file_path, mtime))
-
-    if found_files_with_scores:
-        found_files_with_scores.sort(key=lambda x: (x[0], x[2]), reverse=True)
-        return found_files_with_scores[0][1]
-    elif found_files_no_scores:  # Fallback to most recent if no scored files
-        found_files_no_scores.sort(key=lambda x: x[1], reverse=True)
-        return found_files_no_scores[0][0]
-
-    return None
-
-# --- End Helper Functions ---
-
-def setup_seeds(seed):
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    # print(f"Evaluation seeds set to: {seed}") # Optional: for debugging
+from agents.genetic_agent import GeneticAgent as GeneticAgentWrapper
 
 def run_evaluation_game(env: Tetris, agent):
     current_board_features = env.reset()
@@ -152,10 +51,8 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
     actor_path, critic_path = None, None
     model_load_path = None
 
-    if agent_type_to_load == "ppo":
-        actor_path, critic_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
-    elif agent_type_to_load != "random":
-        model_load_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
+    if agent_type_to_load == "ppo": actor_path, critic_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
+    elif agent_type_to_load != "random": model_load_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
 
     try:
         if agent_type_to_load == "random":
@@ -196,33 +93,18 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
             if hasattr(agent_instance, "get_best_policy_network"):
                 best_ga_net = agent_instance.get_best_policy_network()
                 if best_ga_net:
-                    from agents.genetic_agent import GeneticAgent as GeneticAgentWrapper
-
                     eval_agent = GeneticAgentWrapper(state_size, policy_network_instance=best_ga_net)
                     return eval_agent
                 else:
                     print("GA Controller loaded, but no best network found. Evaluating untrained genetic wrapper.")
-                    from agents.genetic_agent import GeneticAgent as GeneticAgentWrapper
-
-                    return GeneticAgentWrapper(
-                        state_size, seed=tetris_config.SEED + 201
-                    )  # Untrained wrapper
-            # If agent_instance is already the GeneticAgent wrapper, its load should set policy_network
-            elif hasattr(agent_instance, "policy_network"):
-                pass  # Assume its load method set up the policy_network
+                    return GeneticAgentWrapper(state_size, seed=tetris_config.SEED + 201)  
 
         return agent_instance
     except FileNotFoundError as e:
-        print(
-            f"  FileNotFoundError during load for {agent_type_to_load}: {e}. Agent will be untrained if possible."
-        )
-        return agent_class(
-            state_size=state_size, seed=tetris_config.SEED + 201
-        )  # Return fresh instance
+        print(f"  FileNotFoundError during load for {agent_type_to_load}: {e}. Agent will be untrained if possible.")
+        return agent_class(state_size=state_size, seed=tetris_config.SEED + 201)
     except Exception as e:
         print(f"  Error loading agent {agent_type_to_load}: {e}")
-        import traceback
-
         traceback.print_exc()
         return None
 
@@ -274,13 +156,9 @@ def main():
             "Std Score": np.std(agent_scores) if agent_scores else 0,
             "Min Score": np.min(agent_scores) if agent_scores else 0,
             "Max Score": np.max(agent_scores) if agent_scores else 0,
-            "Avg Pieces": np.mean(agent_pieces_played)
-            if agent_pieces_played
-            else 0,  # Use the correct list
+            "Avg Pieces": np.mean(agent_pieces_played) if agent_pieces_played else 0,
             "Avg Tetrominoes": np.mean(agent_tetrominoes) if agent_tetrominoes else 0,
-            "Avg Lines Cleared": np.mean(agent_lines_cleared)
-            if agent_lines_cleared
-            else 0,
+            "Avg Lines Cleared": np.mean(agent_lines_cleared) if agent_lines_cleared else 0,
             "Num Eval Games": len(agent_scores),
         }
         evaluation_summary.append(stats)
@@ -301,7 +179,7 @@ def main():
         "Avg Lines Cleared",
         "Num Eval Games",
     ]
-    # ... (rest of printing and CSV saving logic - no change needed here) ...
+
     col_widths = {h: len(h) for h in headers}
     for row in evaluation_summary:
         for h in headers:
@@ -313,10 +191,7 @@ def main():
     print("-" * len(header_line))
 
     for row in evaluation_summary:
-        row_line = " | ".join(
-            f"{(f'{row[h]:.2f}' if isinstance(row[h], float) else str(row[h])):<{col_widths[h]}}"
-            for h in headers
-        )
+        row_line = " | ".join(f"{(f'{row[h]:.2f}' if isinstance(row[h], float) else str(row[h])):<{col_widths[h]}}" for h in headers)
         print(row_line)
 
     try:
@@ -340,9 +215,7 @@ def main():
                 )
         print(f"\nEvaluation summary saved to: {tetris_config.EVALUATION_CSV_PATH}")
     except IOError as e:
-        print(
-            f"\nERROR: Could not write evaluation summary to {tetris_config.EVALUATION_CSV_PATH}: {e}"
-        )
+        print(f"\nERROR: Could not write evaluation summary to {tetris_config.EVALUATION_CSV_PATH}: {e}")
 
 
 if __name__ == "__main__":

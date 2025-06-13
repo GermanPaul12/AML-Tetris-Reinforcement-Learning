@@ -1,4 +1,3 @@
-# tetris_rl_agents/main.py
 import os
 import sys
 import subprocess
@@ -151,11 +150,11 @@ def handle_training():
             command.extend(["--agent_type", agent_type])
             if specific_total_steps_onpolicy: command.extend(["--total_steps", specific_total_steps_onpolicy])
         
-        if render_game: command.append("--render_game")
-
         else:
             print(f"Unknown or non-trainable agent type selected: {agent_type}. Skipping.")
             continue
+        
+        if render_game: command.append("--render_game")
 
         execute_script(command)
 

@@ -1,9 +1,67 @@
 # tetris_rl_agents/agents/base_agent.py
 from abc import ABC, abstractmethod
+import config
 import torch
-from src.tetris import Tetris # For type hinting
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+from src.tetris import Tetris
+
+class PolicyNetwork(nn.Module):
+    def __init__(self, state_size=config.STATE_SIZE, action_size=config.ACTION_SIZE, fc1_units=config.FC_UNITS, fc2_units=config.FC_UNITS, seed=config.SEED) -> None:
+        """ Initializes the policy network.
+        Args:
+            state_size (int): Number of features in the state representation.
+            action_size (int): Number of possible actions (default is 1 for Tetris).
+            seed (int): Random seed for reproducibility.
+            fc1_units (int): Number of units in the first fully connected layer.
+            fc2_units (int): Number of units in the second fully connected layer.
+        """
+        super().__init__()
+        torch.manual_seed(seed)
+        self.fc1 = nn.Linear(state_size, fc1_units)
+        self.fc2 = nn.Linear(fc1_units, fc2_units)
+        self.fc3 = nn.Linear(fc2_units, action_size)
+        self._create_weights()
+
+    def _create_weights(self) -> None:
+        """ Initializes the weights of the network using Xavier uniform initialization. """
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, 0)
+
+    def forward(self, state_features) -> torch.Tensor:
+        """ Forward pass through the network.
+        Args:
+            state_features (torch.Tensor): Input tensor representing the state features.
+        Returns:
+            torch.Tensor: Output tensor representing the action scores.
+        """
+        x = F.relu(self.fc1(state_features))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+    def get_weights_flat(self) -> np.ndarray:
+        """ Flattens the weights of the network into a single numpy array."""
+        return np.concatenate([p.data.cpu().numpy().flatten() for p in self.parameters()])
+
+    def set_weights_flat(self, flat_weights) -> None:
+        """ Sets the weights of the network from a flattened numpy array.
+        Args:
+            flat_weights (np.ndarray): Flattened weights to set in the network.
+        """
+        offset = 0
+        for param in self.parameters():
+            num_elements = param.data.numel()
+            param.data.copy_(torch.from_numpy(flat_weights[offset:offset + num_elements]).view(param.data.shape).to(config.DEVICE))
+            offset += num_elements
+        if offset != len(flat_weights):
+            raise ValueError("Size mismatch in set_weights_flat!\n Expected {}, got {}".format(len(flat_weights), offset))
+
 
 class BaseAgent(ABC):
+    # @abstractmethod
     def __init__(self, state_size):
         """
         Args:
@@ -12,10 +70,8 @@ class BaseAgent(ABC):
         self.state_size = state_size
         self.last_loss = None
 
-    @abstractmethod
-    def select_action(self, current_board_features: torch.Tensor, 
-                      tetris_game_instance: Tetris, 
-                      epsilon_override: float = None) -> tuple:
+    # @abstractmethod
+    def select_action(self, current_board_features: torch.Tensor, tetris_game_instance: Tetris, epsilon_override: float = None) -> tuple:
         """
         Selects an action based on the current board features and game instance.
 
@@ -38,7 +94,7 @@ class BaseAgent(ABC):
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def learn(self, state_features: torch.Tensor, action_tuple: tuple, reward: float, 
               next_state_features: torch.Tensor, done: bool, 
               game_instance_at_s = None, game_instance_at_s_prime = None, # For agents needing full game state
@@ -59,7 +115,7 @@ class BaseAgent(ABC):
         """
         pass
     
-    @abstractmethod
+    # @abstractmethod
     def reset(self):
         """
         Called at the start of each new game/episode by the training loop.
@@ -67,7 +123,7 @@ class BaseAgent(ABC):
         """
         pass # Default implementation does nothing.
     
-    @abstractmethod
+    # @abstractmethod
     def save(self, filename_primary=None, filename_secondary=None):
         """
         Saves the agent's model(s).
@@ -76,7 +132,7 @@ class BaseAgent(ABC):
         """
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def load(self, filename_primary=None, filename_secondary=None):
         """
         Loads the agent's model(s).
