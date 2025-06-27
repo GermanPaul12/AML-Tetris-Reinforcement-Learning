@@ -48,22 +48,13 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
     print(f"Loading agent for evaluation: {agent_type_to_load.upper()}")
     agent_instance = agent_class(state_size=state_size, seed=tetris_config.SEED + 200)
 
-    actor_path, critic_path = None, None
     model_load_path = None
 
-    if agent_type_to_load == "ppo": actor_path, critic_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
-    elif agent_type_to_load != "random": model_load_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
+    if agent_type_to_load != "random": model_load_path = find_latest_or_best_model_path(agent_type_to_load, model_base_dir)
 
     try:
         if agent_type_to_load == "random":
             print("Initializing Random Agent for evaluation (no model to load).")
-        elif agent_type_to_load == "ppo":
-            if actor_path and critic_path:
-                print(f"Attempting to load PPO Actor: {os.path.basename(actor_path)}")
-                print(f"Attempting to load PPO Critic: {os.path.basename(critic_path)}")
-                agent_instance.load(actor_path, critic_path)
-            else:
-                print(f"PPO model files not found in {model_base_dir}. Evaluating untrained PPO.")
         elif model_load_path:
             print(f"Attempting to load model: {os.path.basename(model_load_path)}")
             agent_instance.load(model_load_path)
@@ -78,6 +69,7 @@ def load_agent_for_eval(agent_type_to_load, state_size, model_base_dir):
             "actor",
             "critic",
             "network",
+            "v_network",
             "central_policy_net",
             "best_individual_network",
         ]

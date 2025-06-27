@@ -5,21 +5,21 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
+import config
 from .base_agent import BaseAgent, PolicyNetwork
-import config as global_config
 
-DEVICE = global_config.DEVICE
+DEVICE = config.DEVICE
 
 class REINFORCEAgent(BaseAgent):
-    def __init__(self, state_size):
+    def __init__(self, state_size, seed:int=0):
         super().__init__(state_size)
-        self.policy_network = PolicyNetwork(state_size, fc1_units=global_config.REINFORCE_FC1_UNITS, fc2_units=global_config.REINFORCE_FC2_UNITS).to(DEVICE)
-        self.optimizer = optim.Adam(self.policy_network.parameters(), lr=global_config.REINFORCE_LEARNING_RATE)
-        self.gamma = global_config.REINFORCE_GAMMA
+        self.policy_network = PolicyNetwork(state_size, fc1_units=config.REINFORCE_FC1_UNITS, fc2_units=config.REINFORCE_FC2_UNITS, seed=seed).to(DEVICE)
+        self.optimizer = optim.Adam(self.policy_network.parameters(), lr=config.REINFORCE_LEARNING_RATE)
+        self.gamma = config.REINFORCE_GAMMA
 
         self.saved_log_probs = []
         self.rewards = []
-        self.episodes_done = 0  # Optional counter
+        self.episodes_done = 0
         self.last_loss = None
 
         print("REINFORCE Agent initialized to score S' states.")
@@ -101,7 +101,7 @@ class REINFORCEAgent(BaseAgent):
         self.saved_log_probs = []
 
     def save(self, filename_primary=None, filename_secondary=None):
-        path = (filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH)
+        path = (filename_primary if filename_primary else config.REINFORCE_MODEL_PATH)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(
             {
@@ -112,7 +112,7 @@ class REINFORCEAgent(BaseAgent):
         print(f"REINFORCE Agent saved to {path}")
 
     def load(self, filename_primary=None, filename_secondary=None):
-        path = (filename_primary if filename_primary else global_config.REINFORCE_MODEL_PATH)
+        path = (filename_primary if filename_primary else config.REINFORCE_MODEL_PATH)
         if os.path.exists(path):
             checkpoint = torch.load(path, map_location=DEVICE)
             self.policy_network.load_state_dict(checkpoint["policy_network_state_dict"])

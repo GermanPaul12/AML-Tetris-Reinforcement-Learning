@@ -18,7 +18,7 @@ GIF_FPS = 300
 
 # --- Evaluation Configuration (for evaluate.py) ---
 NUM_EVAL_GAMES = 20                     # Number of full games for final evaluation
-MAX_PIECES_PER_EVAL_GAME = 1000000000
+MAX_PIECES_PER_EVAL_GAME = 10000000
 RENDER_MODE_EVAL = "None"               # None for faster, "human" for viewing
 
 # --- Device Configuration ---

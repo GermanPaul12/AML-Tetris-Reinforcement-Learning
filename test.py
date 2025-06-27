@@ -154,27 +154,14 @@ def test():
     agent_init_seed = test_master_seed + sum(ord(c) for c in opt.agent_type)
     agent = agent_class(state_size=state_size, seed=agent_init_seed)
 
-    actor_path, critic_path, model_load_path = None, None, None
-    if opt.agent_type == "ppo":
-        actor_path, critic_path = find_latest_or_best_model_path(opt.agent_type, model_base_dir)
-    elif opt.agent_type != "random":
+    model_load_path = None
+    if opt.agent_type != "random":
         model_load_path = find_latest_or_best_model_path(opt.agent_type, model_base_dir)
 
     loaded_successfully = False
     if opt.agent_type == "random":
         print("Testing Random Agent. No model to load.")
         loaded_successfully = True
-    elif opt.agent_type == "ppo":
-        if actor_path and critic_path:
-            try:
-                agent.load(actor_path, critic_path)
-                print(f"Loaded PPO models: Actor from {os.path.basename(actor_path)}, Critic from {os.path.basename(critic_path)}")
-                loaded_successfully = True
-            except Exception as e:
-                print(f"ERROR loading PPO models: {e}")
-        else:
-            print(f"ERROR: PPO model files not found in {model_base_dir}. Cannot test.")
-            return
     elif model_load_path:
         try:
             agent.load(model_load_path)

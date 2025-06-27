@@ -103,7 +103,6 @@ def train(opt: argparse.Namespace):
             )
 
         s_t_board_features = s_prime_actual_features
-
         
         if game_over:
             games_played_count += 1
@@ -137,41 +136,20 @@ def train(opt: argparse.Namespace):
                 highest_score_this_session = current_game_score
                 print(f"** New best score this session: {highest_score_this_session}. Checking against disk. **")
 
-                if agent_type == "ppo":
-                    actor_prefix = get_agent_file_prefix(agent_type, is_actor=True)
-                    critic_prefix = get_agent_file_prefix(agent_type, is_critic=True)
-                    disk_best_score = find_best_existing_score(actor_prefix, current_model_base_dir)
+                agent_prefix = get_agent_file_prefix(agent_type)
+                disk_best_score = find_best_existing_score(agent_prefix, current_model_base_dir)
 
-                    if current_game_score > disk_best_score:
-                        print(f"Current game score {current_game_score} > PPO disk best score {disk_best_score}. Saving.")
-                        if disk_best_score > -1:
-                            old_actor_path = os.path.join(current_model_base_dir, f"{actor_prefix}_score_{disk_best_score}.pth")
-                            old_critic_path = os.path.join(current_model_base_dir, f"{critic_prefix}_score_{disk_best_score}.pth")
-                            if os.path.exists(old_actor_path): os.remove(old_actor_path)
-                            if os.path.exists(old_critic_path): os.remove(old_critic_path)
-
-                        new_actor_path = os.path.join(current_model_base_dir, f"{actor_prefix}_score_{current_game_score}.pth")
-                        new_critic_path = os.path.join(current_model_base_dir, f"{critic_prefix}_score_{current_game_score}.pth")
-                        ppo_controller.save(new_actor_path, new_critic_path)  # PPO agent's save method
-                        print(f"Saved PPO model (Score: {current_game_score}) to {new_actor_path} and {new_critic_path}")
-                    else:
-                        print(f"Session best {current_game_score}, but PPO disk best is {disk_best_score}. Not overwriting.")
-
-                elif (agent_type == "a2c"):
-                    agent_prefix = get_agent_file_prefix(agent_type)
-                    disk_best_score = find_best_existing_score(agent_prefix, current_model_base_dir)
-                    if current_game_score > disk_best_score:
-                        print(f"Current game score {current_game_score} > A2C disk best score {disk_best_score}. Saving.")
-                        if disk_best_score > -1:
-                            old_model_path = os.path.join(current_model_base_dir, f"{agent_prefix}_score_{disk_best_score}.pth")
-                            if os.path.exists(old_model_path): os.remove(old_model_path)
-                        new_model_path = os.path.join(current_model_base_dir, f"{agent_prefix}_score_{current_game_score}.pth")
-                        a2c_controller.save(new_model_path)
-                        print(f"Saved A2C model (Score: {current_game_score}) to {new_model_path}")
-                    else:
-                        print(f"Session best {current_game_score}, but A2C disk best is {disk_best_score}. Not overwriting.")
+                if current_game_score > disk_best_score:
+                    print(f"Current game score {current_game_score} > {agent_prefix.upper()} disk best score {disk_best_score}. Saving.")
+                    if disk_best_score > -1:
+                        old_model_path = os.path.join(current_model_base_dir, f"{agent_prefix}_score_{disk_best_score}.pth")
+                        if os.path.exists(old_model_path): os.remove(old_model_path)
+                    new_model_path = os.path.join(current_model_base_dir, f"{agent_prefix}_score_{current_game_score}.pth")
+                    if agent_type == "ppo": ppo_controller.save(new_model_path)
+                    else: a2c_controller.save(new_model_path)
+                    print(f"Saved {agent_prefix.upper()} model (Score: {current_game_score}) to {new_model_path}")
                 else:
-                    print(f"Warning: Unsupported agent type '{agent_type}' for saving models. Skipping model save.")
+                    print(f"Session best {current_game_score}, but {agent_prefix.upper()} disk best is {disk_best_score}. Not overwriting.")
             # --- End Model Saving ---
 
             if current_game_score >= target_score:

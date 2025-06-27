@@ -15,7 +15,8 @@ class ESAgent(BaseAgent):
         sigma=config.ES_SIGMA,
         learning_rate=config.ES_LEARNING_RATE,
         eval_games_per_param=config.ES_EVAL_GAMES_PER_PARAM,
-        max_pieces_per_eval_game=config.ES_MAX_PIECES_PER_ES_EVAL_GAME
+        max_pieces_per_eval_game=config.ES_MAX_PIECES_PER_ES_EVAL_GAME,
+        seed:int=0
     ):
         super().__init__(state_size)
 
@@ -26,7 +27,7 @@ class ESAgent(BaseAgent):
         self.max_pieces_per_eval_game = max_pieces_per_eval_game
 
         # Central policy network whose parameters are evolved
-        self.central_policy_net = PolicyNetwork(state_size, action_size=1, fc1_units=config.ES_FC1_UNITS, fc2_units=config.ES_FC2_UNITS).to(DEVICE)
+        self.central_policy_net = PolicyNetwork(state_size, action_size=1, seed=seed, fc1_units=config.ES_FC1_UNITS, fc2_units=config.ES_FC2_UNITS).to(DEVICE)
         self.num_params = self.central_policy_net.get_weights_flat().size
         self.current_best_fitness = -float('inf')
         self.current_best_weights = self.central_policy_net.get_weights_flat().copy()

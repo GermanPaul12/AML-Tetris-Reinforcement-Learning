@@ -10,21 +10,14 @@ from typing import Tuple
 # Helper Functions for Agent File Management, Score Parsing and Seeding #
 #########################################################################
 
-def get_agent_file_prefix(agent_type_str:str, is_actor:bool=False, is_critic:bool=False) -> str:
+def get_agent_file_prefix(agent_type_str:str) -> str:
     """Generates a standardized file prefix for saving/loading agent models.
     Args:
         agent_type_str (str): Type of the agent (e.g., "ppo", "genetic", "es").
-        is_actor (bool): If True, returns the prefix for actor models.
-        is_critic (bool): If True, returns the prefix for critic models.
     Returns:
         str: A standardized prefix for the agent model file.
     """
-    processed_agent_type = agent_type_str.replace("_", "-")
-    if agent_type_str == "ppo":
-        if is_actor: return "ppo-actor"
-        elif is_critic: return "ppo-critic"
-        else: return "ppo-model"
-    return processed_agent_type
+    return agent_type_str.replace("_", "-").lower()
 
 def parse_score_from_filename(filename_basename:str, expected_prefix:str) -> (int | None):
     """Extracts the score from a filename that matches the expected pattern.
@@ -73,23 +66,7 @@ def find_latest_or_best_model_path(agent_type_str:str, model_dir:str) -> Tuple[s
     """
     if not os.path.isdir(model_dir):
         print(f"Warning: Model directory {model_dir} does not exist.")
-        return None, None if agent_type_str == "ppo" else None
-
-    if agent_type_str == "ppo":
-        actor_prefix = get_agent_file_prefix(agent_type_str, is_actor=True)
-        critic_prefix = get_agent_file_prefix(agent_type_str, is_critic=True)
-        
-        actor_full_path = None
-        critic_full_path = None
-        
-        for filename in os.listdir(model_dir):
-            if filename.startswith(actor_prefix) and filename.endswith(".pth"):
-                score = parse_score_from_filename(filename, actor_prefix)
-                critic_filename = f"{critic_prefix}_score_{score}.pth"
-                actor_full_path = os.path.join(model_dir, filename)
-                critic_full_path = os.path.join(model_dir, critic_filename)
-
-        return actor_full_path, critic_full_path
+        return None
 
     agent_prefix = get_agent_file_prefix(agent_type_str)
     

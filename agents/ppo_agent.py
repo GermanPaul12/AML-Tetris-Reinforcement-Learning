@@ -263,20 +263,27 @@ class PPOAgent(BaseAgent):
         self.clear_memory()
         self.last_loss = {}
     
-    def save(self, filename_actor=None, filename_critic=None):
-        path_actor = (filename_actor if filename_actor else global_config.PPO_ACTOR_MODEL_PATH)
-        path_critic = (filename_critic if filename_critic else global_config.PPO_CRITIC_MODEL_PATH)
-        os.makedirs(os.path.dirname(path_actor), exist_ok=True)
-        os.makedirs(os.path.dirname(path_critic), exist_ok=True)
-        torch.save(self.actor.state_dict(), path_actor)
-        torch.save(self.critic.state_dict(), path_critic)
-        print(f"PPO Actor saved to {path_actor}, Critic to {path_critic}")
+    def save(self, filepath:str=None) -> None:
+        """ Save the actor and critic networks to a file.
+        Args:
+            filepath (str, optional): Path to save the model. Defaults to config.PPO_MODEL_PATH.
+        """
+        path = filepath or global_config.PPO_MODEL_PATH
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        torch.save({"actor": self.actor.state_dict(), "critic": self.critic.state_dict()}, path)
+        print(f"PPO Agent saved to {path}")
 
-    def load(self, filename_actor=None, filename_critic=None):
-        path_actor = (filename_actor if filename_actor else global_config.PPO_ACTOR_MODEL_PATH)
-        path_critic = (filename_critic if filename_critic else global_config.PPO_CRITIC_MODEL_PATH)
-        if os.path.exists(path_actor): self.actor.load_state_dict(torch.load(path_actor, map_location=DEVICE))
-        if os.path.exists(path_critic): self.critic.load_state_dict(torch.load(path_critic, map_location=DEVICE))
-        self.actor.train()
-        self.critic.train()
-        print(f"PPO models loaded. Actor: {path_actor}, Critic: {path_critic}")
+    def load(self, filepath:str=None) -> None:
+        """ Load the actor and critic networks from a file.
+        Args:
+            filepath (str, optional): Path to load the model from. Defaults to config.PPO_MODEL_PATH.
+        """
+        path = filepath or global_config.PPO_MODEL_PATH
+        print(f"Loading PPO Agent from {path}...")
+        if os.path.exists(path):
+            checkpoint = torch.load(path, map_location=DEVICE)
+            self.actor.load_state_dict(checkpoint["actor"])
+            self.critic.load_state_dict(checkpoint["critic"])
+            print(f"PPO Agent loaded from {path}")
+        else:
+            print(f"Error: Model not found at {path}")

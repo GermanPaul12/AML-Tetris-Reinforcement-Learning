@@ -44,10 +44,10 @@ class ReplayBuffer:
     def __len__(self): return len(self.memory)
 
 class DQNAgent(BaseAgent):
-    def __init__(self, state_size):
+    def __init__(self, state_size, seed:int=0):
         super().__init__(state_size)
 
-        self.v_network = PolicyNetwork(state_size, fc1_units=global_config.DQN_FC1_UNITS, fc2_units=global_config.DQN_FC2_UNITS).to(DEVICE)
+        self.v_network = PolicyNetwork(state_size, seed=seed, fc1_units=global_config.DQN_FC1_UNITS, fc2_units=global_config.DQN_FC2_UNITS).to(DEVICE)
         self.optimizer = optim.Adam(self.v_network.parameters(), lr=global_config.DQN_LR)
         self.criterion = nn.MSELoss()
         self.memory = ReplayBuffer(global_config.DQN_BUFFER_SIZE, global_config.DQN_BATCH_SIZE)
@@ -62,14 +62,14 @@ class DQNAgent(BaseAgent):
         print(f"  Agent's internal epsilon starts at: {self.epsilon:.3f} (train.py will override during training steps)")
 
     def select_action(self, current_board_features_s_t: torch.Tensor, tetris_game_instance: Tetris, epsilon_override: float = None) -> tuple: 
-        current_epsilon_for_decision = epsilon_override if epsilon_override else self.epsilon
+        current_epsilon_for_decision = epsilon_override if None != epsilon_override else self.epsilon
         
         # Get the current board features
         next_steps_dict = tetris_game_instance.get_next_states()
         possible_actions_tuples = list(next_steps_dict.keys())
         possible_features = [features.to(DEVICE) for features in next_steps_dict.values()]
         
-        if random.random() <= current_epsilon_for_decision: # Select index randomly
+        if random.random() <= current_epsilon_for_decision:
             chosen_idx = random.randrange(len(possible_actions_tuples)) 
         else:
             self.v_network.eval()
