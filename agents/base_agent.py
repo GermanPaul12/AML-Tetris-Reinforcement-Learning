@@ -8,6 +8,7 @@ import numpy as np
 from src.tetris import Tetris
 
 class PolicyNetwork(nn.Module):
+    """ A simple feedforward neural network for the policy in reinforcement learning. """
     def __init__(self, state_size=config.STATE_SIZE, action_size=config.ACTION_SIZE, fc1_units=config.FC_UNITS, fc2_units=config.FC_UNITS, seed=config.SEED) -> None:
         """ Initializes the policy network.
         Args:
@@ -61,7 +62,7 @@ class PolicyNetwork(nn.Module):
 
 
 class BaseAgent(ABC):
-    # @abstractmethod
+    @abstractmethod
     def __init__(self, state_size):
         """
         Args:
@@ -70,7 +71,7 @@ class BaseAgent(ABC):
         self.state_size = state_size
         self.last_loss = None
 
-    # @abstractmethod
+    @abstractmethod
     def select_action(self, current_board_features: torch.Tensor, tetris_game_instance: Tetris, epsilon_override: float = None) -> tuple:
         """
         Selects an action based on the current board features and game instance.
@@ -115,16 +116,16 @@ class BaseAgent(ABC):
         """
         pass
     
-    # @abstractmethod
+    @abstractmethod
     def reset(self):
         """
         Called at the start of each new game/episode by the training loop.
         Allows the agent to reset any internal episodic state.
         """
-        pass # Default implementation does nothing.
-    
-    # @abstractmethod
-    def save(self, filename_primary=None, filename_secondary=None):
+        pass
+
+    @abstractmethod
+    def save(self, filepath:str=None):
         """
         Saves the agent's model(s).
         PPO might use filename_primary for actor and filename_secondary for critic.
@@ -132,8 +133,8 @@ class BaseAgent(ABC):
         """
         pass
 
-    # @abstractmethod
-    def load(self, filename_primary=None, filename_secondary=None):
+    @abstractmethod
+    def load(self, filepath:str=None):
         """
         Loads the agent's model(s).
         """

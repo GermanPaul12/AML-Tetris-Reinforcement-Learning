@@ -1,4 +1,3 @@
-# tetris_rl_agents/agents/__init__.py
 from .random_agent import RandomAgent
 from .dqn_agent import DQNAgent
 from .genetic_agent import GeneticAgent, GeneticAlgorithmController

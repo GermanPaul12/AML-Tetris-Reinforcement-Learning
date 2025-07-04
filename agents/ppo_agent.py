@@ -6,13 +6,22 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
+from typing import Tuple
+from src.tetris import Tetris
 from .base_agent import BaseAgent, PolicyNetwork
 import config as global_config
 
 DEVICE = global_config.DEVICE
 
 class PPOAgent(BaseAgent):
+    """ Proximal Policy Optimization (PPO) Agent for Tetris"""
+    
     def __init__(self, state_size, seed=0):
+        """ Initializes the PPO Agent with the given state size and seed.
+        Args:
+            state_size (int): Size of the state representation.
+            seed (int): Random seed for reproducibility.
+        """
         super().__init__(state_size)
         
         # Hyperparameters from config
@@ -33,19 +42,27 @@ class PPOAgent(BaseAgent):
 
         # Buffer to store trajectory data
         self.memory = {
-            "s_t_features": [],  # S_t
-            "all_s_prime_features_lists": [],  # List of all possible S' from S_t
-            "chosen_action_indices": [],  # Index of chosen action in the list above
-            "log_probs_old": [],  # Log prob of the chosen action
-            "rewards": [],  # Reward received
-            "dones": [],  # Done flag
-            "values_s_t": [],  # V(S_t) from critic
+            "s_t_features": [],
+            "all_s_prime_features_lists": [],
+            "chosen_action_indices": [],
+            "log_probs_old": [],
+            "rewards": [],
+            "dones": [],
+            "values_s_t": [],
         }
-        self.last_loss = {}  # For logging multiple losses
+        self.last_loss = {}
 
         print(f"PPO Agent initialized. Update Horizon: {self.update_horizon}, Device: {DEVICE}")
 
-    def select_action(self, current_board_features_s_t, tetris_game_instance, epsilon_override=None):
+    def select_action(self, current_board_features_s_t:torch.Tensor, tetris_game_instance:Tetris, epsilon_override:float=None) -> Tuple[Tuple[int, int], dict]:
+        """ Selects an action based on the current state features and the Tetris game instance.
+        Args:
+            current_board_features_s_t (torch.Tensor): Features of the current board state S_t.
+            tetris_game_instance (Tetris): The current Tetris game instance.
+            epsilon_override (float, optional): Not used.
+        Returns:
+            Tuple: A tuple containing the chosen action (as coordinates) and auxiliary information.
+        """
         next_steps_dict = tetris_game_instance.get_next_states()
         if not next_steps_dict: return (tetris_game_instance.width // 2, 0), {}  # Return default action, empty aux_info
 
@@ -81,7 +98,15 @@ class PPOAgent(BaseAgent):
         }
         return chosen_action_tuple, aux_info
 
-    def learn(self, state_features, reward, next_state_features, done, aux_info):
+    def learn(self, state_features:torch.Tensor, reward:int, next_state_features:torch.Tensor, done:bool, aux_info:dict) -> None:
+        """ Learn from the current state, reward, next state, and auxiliary information.
+        Args:
+            state_features (torch.Tensor): Features of the current state S_t.
+            reward (int): Reward received from the environment.
+            next_state_features (torch.Tensor): Features of the next state S_{t+1}.
+            done (bool): Whether the episode has ended.
+            aux_info (dict): Auxiliary information containing log probabilities, entropy, and values.
+        """
         if not aux_info: return
 
         self.memory["s_t_features"].append(state_features.cpu())
@@ -95,10 +120,15 @@ class PPOAgent(BaseAgent):
         # If buffer is full, trigger the update
         if len(self.memory["rewards"]) >= self.update_horizon: self.learn_from_memory(next_state_features)
 
-    def learn_on_episode_end(self):
+    def learn_on_episode_end(self) -> None:
+        """ Learn from the memory at the end of an episode."""
         if len(self.memory["rewards"]) > 0: self.learn_from_memory(last_s_t_plus_1_features=None)
 
-    def learn_from_memory(self, last_s_t_plus_1_features=None):
+    def learn_from_memory(self, last_s_t_plus_1_features:torch.Tensor=None) -> None:
+        """ Learn from the collected memory.
+        Args:
+            last_s_t_plus_1_features (torch.Tensor, optional): Features of the next state S_{t+1}. If None, assumes the episode ended.
+        """
         if len(self.memory["rewards"]) == 0:  # Nothing to learn from
             self.last_loss = {}
             return
@@ -254,7 +284,8 @@ class PPOAgent(BaseAgent):
         }
         self.clear_memory()
 
-    def clear_memory(self):
+    def clear_memory(self) -> None:
+        """Clear the agent's memory."""
         for key in self.memory:
             self.memory[key] = []
 

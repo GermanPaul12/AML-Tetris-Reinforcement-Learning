@@ -1,16 +1,24 @@
 import torch
 import random
 
+from typing import Tuple
+
 from .base_agent import BaseAgent
 from src.tetris import Tetris
 
 class RandomAgent(BaseAgent):
+    """ A RandomAgent that selects actions randomly from the available next moves in Tetris."""
     def __init__(self, state_size, seed=0):
+        """ Initializes the RandomAgent with a given state size and seed for reproducibility.
+        Args:
+            state_size (int): Size of the state representation.
+            seed (int): Random seed for reproducibility.
+        """
         super().__init__(state_size)
         random.seed(seed)
         print("RandomAgent for Tetris initialized.")
 
-    def select_action(self, state_features:torch.Tensor, tetris_game_instance:Tetris, epsilon_override=0.0):
+    def select_action(self, state_features:torch.Tensor, tetris_game_instance:Tetris, epsilon_override=0.0) -> Tuple[Tuple[int, int], dict]:
         """ Selects a random action from the possible next moves.
         Args:
             state_features (torch.Tensor): The current state features of the Tetris game.
@@ -30,3 +38,15 @@ class RandomAgent(BaseAgent):
         chosen_action_tuple = random.choice(possible_actions_tuples)
 
         return chosen_action_tuple, {}
+    
+    def reset(self) -> None:
+        """ Reset method is not applicable for RandomAgent, but defined for interface compatibility. """
+        pass
+    
+    def save(self, filepath=None) -> None:
+        """ Save method is not applicable for RandomAgent, but defined for interface compatibility. """
+        pass
+    
+    def load(self, filepath=None) -> None:
+        """ Load method is not applicable for RandomAgent, but defined for interface compatibility. """
+        pass

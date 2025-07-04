@@ -10,6 +10,7 @@ from .base_agent import BaseAgent, PolicyNetwork
 DEVICE = config.DEVICE
 
 class ESAgent(BaseAgent):
+    """Evolution Strategy (ES) Agent for Tetris."""
     def __init__(self, state_size,
         population_size=config.ES_POPULATION_SIZE,
         sigma=config.ES_SIGMA,
@@ -17,7 +18,17 @@ class ESAgent(BaseAgent):
         eval_games_per_param=config.ES_EVAL_GAMES_PER_PARAM,
         max_pieces_per_eval_game=config.ES_MAX_PIECES_PER_ES_EVAL_GAME,
         seed:int=0
-    ):
+    ) -> None:
+        """ Initializes the ES Agent with the given parameters.
+        Args:
+            state_size (int): Size of the state representation.
+            population_size (int): Number of candidate solutions in the population.
+            sigma (float): Standard deviation for perturbations.
+            learning_rate (float): Learning rate for updating the policy.
+            eval_games_per_param (int): Number of games to evaluate each candidate parameter set.
+            max_pieces_per_eval_game (int): Maximum pieces per evaluation game.
+            seed (int): Random seed for reproducibility.
+        """
         super().__init__(state_size)
 
         self.population_size = population_size
@@ -34,7 +45,14 @@ class ESAgent(BaseAgent):
 
         print(f"ES Agent (Controller) initialized. Pop_Size: {self.population_size}, Sigma: {self.sigma}, LR: {self.learning_rate}")
 
-    def _evaluate_parameters(self, flat_weights_candidate, eval_env_template: Tetris):
+    def _evaluate_parameters(self, flat_weights_candidate:np.ndarray, eval_env_template:Tetris) -> float:
+        """ Evaluates a candidate set of parameters by running multiple games.
+        Args:
+            flat_weights_candidate (np.ndarray): Flattened weights of the policy network to evaluate.
+            eval_env_template (Tetris): A template environment to evaluate the policy.
+        Returns:
+            float: The average score across multiple games with the candidate parameters.
+        """
         temp_policy_net = PolicyNetwork(self.state_size, action_size=1, fc1_units=config.ES_FC1_UNITS, fc2_units=config.ES_FC2_UNITS).to(DEVICE) # seed for structure only
         temp_policy_net.set_weights_flat(flat_weights_candidate)
         temp_policy_net.eval()
@@ -42,11 +60,7 @@ class ESAgent(BaseAgent):
         total_rewards = []
         for _ in range(self.eval_games_per_param):
             
-            eval_env = Tetris(
-                width=eval_env_template.width,
-                height=eval_env_template.height,
-                block_size=eval_env_template.block_size
-            )
+            eval_env = Tetris() # eval_env_template
             
             current_board_features = eval_env.reset()
             if DEVICE.type == 'cuda': current_board_features = current_board_features.cuda()
@@ -113,7 +127,14 @@ class ESAgent(BaseAgent):
         return np.mean(fitness_scores), np.max(fitness_scores), current_eval_of_central
 
     def select_action(self, current_board_features: torch.Tensor, tetris_game_instance: Tetris, epsilon_override=None) -> Tuple[Tuple[int, int],dict[str, torch.Tensor | None]]:
-
+        """ Selects an action based on the current board features using the central policy network.
+        Args:
+            current_board_features (torch.Tensor): The current state of the Tetris board.
+            tetris_game_instance (Tetris): The current Tetris game instance.
+            epsilon_override (float, optional): Override for exploration rate. Defaults to None.
+        Returns:
+            Tuple[Tuple[int, int], dict[str, torch.Tensor | None]]: The chosen action as a tuple (x, rotation) and auxiliary information.
+        """
         self.central_policy_net.set_weights_flat(self.current_best_weights)
         self.central_policy_net.eval()
 
@@ -129,23 +150,27 @@ class ESAgent(BaseAgent):
         
         return chosen_action_tuple, {'features_after_chosen_action': feature_tensors_for_next_steps[chosen_idx]}
 
-    def save(self, filepath=None) -> None:
+    def reset(self) -> None:
+        """ Reset method is not applicable for ESAgent, but defined for interface compatibility. """
+        pass
+    
+    def save(self, filepath:str=None) -> None:
         """ Save the ES agent's policy network to a file.
         Args:
             filepath (str, optional): Path to save the model file. If None, uses the global config path.
         """
-        path = filepath if filepath else config.ES_MODEL_PATH
+        path = filepath or config.ES_MODEL_PATH
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.central_policy_net.set_weights_flat(self.current_best_weights)
         torch.save(self.central_policy_net.state_dict(), path)
         print(f"ES Agent (best policy) saved to: {path}")
 
-    def load(self, filepath=None) -> None:
+    def load(self, filepath:str=None) -> None:
         """ Load the ES agent's policy network from a file.
         Args:
             filepath (str, optional): Path to the model file. If None, uses the global config path.
         """
-        path = filepath if filepath else config.ES_MODEL_PATH
+        path = filepath or config.ES_MODEL_PATH
         if os.path.exists(path):
             self.central_policy_net.load_state_dict(torch.load(path, map_location=DEVICE))
             self.central_policy_net.eval()
