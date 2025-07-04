@@ -7,7 +7,8 @@ import numpy as np
 from PIL import Image
 from collections import deque
 
-import config as tetris_config
+import config
+
 from helper import *
 from src.tetris import Tetris
 from agents import AGENT_REGISTRY
@@ -15,7 +16,7 @@ from agents import AGENT_REGISTRY
 def get_args() -> argparse.Namespace:
     """Parse command line arguments for testing Tetris agents."""
     parser = argparse.ArgumentParser("""Test pre-trained Reinforcement Learning Agents for Tetris""")
-    parser.add_argument("--agent_type", type=str, default="dqn", choices=list(tetris_config.AGENT_TYPES), help="Type of agent to test.")
+    parser.add_argument("--agent_type", type=str, default="dqn", choices=list(config.AGENT_TYPES), help="Type of agent to test.")
     parser.add_argument("--output_gif_basename", type=str, default="best_tetris_game", help="Base name for the output GIF file (score will be appended).")
     parser.add_argument("--num_games", type=int, default=5, help="Number of games to play to find the best one to record.")
     args = parser.parse_args()
@@ -60,7 +61,7 @@ def play_game(env: Tetris, agent, game_seed, record_frames=False, max_pieces=100
     setup_seeds(game_seed)
 
     current_board_features = env.reset()
-    if tetris_config.DEVICE.type == "cuda": current_board_features = current_board_features.cuda()
+    if config.DEVICE.type == "cuda": current_board_features = current_board_features.cuda()
     if hasattr(agent, "reset"): agent.reset()
 
     game_score = 0
@@ -85,7 +86,7 @@ def play_game(env: Tetris, agent, game_seed, record_frames=False, max_pieces=100
         if game_over: break
 
         current_board_features = env.get_state_properties(env.board)
-        if tetris_config.DEVICE.type == "cuda": current_board_features = current_board_features.cuda()
+        if config.DEVICE.type == "cuda": current_board_features = current_board_features.cuda()
 
     if record_frames:
         frame = _get_rgb_frame_from_env(env)
@@ -136,14 +137,14 @@ def create_optimized_gif(frames, output_path, target_mb=50):
 
 def test():
     opt = get_args()
-    model_base_dir = tetris_config.MODEL_DIR
-    tetris_config.ensure_model_dir_exists()
+    model_base_dir = config.MODEL_DIR
+    config.ensure_model_dir_exists()
 
-    test_master_seed = tetris_config.SEED + 100
+    test_master_seed = config.SEED + 100
     setup_seeds(test_master_seed)
 
     env = Tetris()
-    state_size = tetris_config.STATE_SIZE
+    state_size = config.STATE_SIZE
 
     agent_class = AGENT_REGISTRY.get(opt.agent_type)
     if not agent_class:
@@ -175,14 +176,11 @@ def test():
 
     networks_to_set_eval = [
         "policy_network",
-        "qnetwork_local",
-        "qnetwork_target",
         "v_network",
         "actor",
         "critic",
-        "network",
         "central_policy_net",
-        "best_individual_network",
+        "best_individual_network"
     ]
     for net_name in networks_to_set_eval:
         if hasattr(agent, net_name):
@@ -198,7 +196,7 @@ def test():
     # First pass: find best game without recording
     for i_game in range(opt.num_games):
         current_game_seed = test_master_seed + 1000 + i_game
-        score, pieces, _, _, _ = play_game(env, agent, current_game_seed, record_frames=False, max_pieces=tetris_config.MAX_PIECES_PER_EVAL_GAME)
+        score, pieces, _, _, _ = play_game(env, agent, current_game_seed, record_frames=False, max_pieces=config.MAX_PIECES_PER_EVAL_GAME)
         all_test_scores.append(score)
         print(f"  Game {i_game + 1}/{opt.num_games}: Score={score}, Pieces={pieces}")
 
@@ -213,10 +211,10 @@ def test():
 
     # Replay best game with recording
     print(f"\nReplaying best game (Seed: {seed_for_best_game}) to record GIF...")
-    score, pieces, _, _, best_game_frames = play_game(env, agent, seed_for_best_game, record_frames=True, max_pieces=tetris_config.MAX_PIECES_PER_EVAL_GAME, max_frames_to_keep=1000)
+    score, pieces, _, _, best_game_frames = play_game(env, agent, seed_for_best_game, record_frames=True, max_pieces=config.MAX_PIECES_PER_EVAL_GAME, max_frames_to_keep=1000)
 
     gif_filename = (f"{opt.output_gif_basename}_score_{best_score_found}_{opt.agent_type}.gif")
-    gif_path = os.path.join(tetris_config.MODEL_DIR, "gifs", gif_filename)
+    gif_path = os.path.join(config.MODEL_DIR, "gifs", gif_filename)
     os.makedirs(os.path.dirname(gif_path), exist_ok=True)
 
     print(f"\nCreating GIF for best game (Score: {best_score_found})...")

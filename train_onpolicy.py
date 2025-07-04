@@ -1,6 +1,6 @@
 import os
 import argparse
-import config as tetris_config
+import config
 
 from agents import PPOAgent, A2CAgent
 
@@ -27,20 +27,22 @@ def train(opt: argparse.Namespace):
     agent_type = opt.agent_type.lower()
     max_steps = opt.total_steps
     max_games = opt.num_games
-    target_score = tetris_config.SCORE_TARGET
-    current_model_base_dir = tetris_config.MODEL_DIR
+    target_score = config.SCORE_TARGET
+    current_model_base_dir = config.MODEL_DIR
     
     if agent_type == "ppo":
         print("\n--- Training PPO Agent ---")
-        ppo_controller = PPOAgent(state_size=tetris_config.STATE_SIZE, seed=tetris_config.SEED)
+        ppo_controller = PPOAgent(state_size=config.STATE_SIZE, seed=config.SEED)
         
-        max_steps = tetris_config.PPO_TOTAL_PIECES or max_steps
+        max_steps = config.PPO_TOTAL_PIECES or max_steps
+        max_games = config.PPO_TRAIN_GAMES or max_games
         print(f"Using PPO_TOTAL_PIECES from config for max_steps: {max_steps}")
     elif agent_type == "a2c":
         print("\n--- Training A2C Agent ---")
-        a2c_controller = A2CAgent(state_size=tetris_config.STATE_SIZE, seed=tetris_config.SEED)
+        a2c_controller = A2CAgent(state_size=config.STATE_SIZE, seed=config.SEED)
         
-        max_games = tetris_config.A2C_TRAIN_GAMES or max_games
+        max_steps = config.A2C_TOTAL_PIECES or max_steps
+        max_games = config.A2C_TRAIN_GAMES or max_games
         print(f"Using A2C_TRAIN_GAMES from config for max_games: {max_games}")
     else:
         raise ValueError(f"Unsupported agent type: {agent_type}. Choose 'a2c' or 'ppo'.")
@@ -51,7 +53,7 @@ def train(opt: argparse.Namespace):
     # === Start Training Loop ===
     env = Tetris()
     s_t_board_features = env.reset()
-    if tetris_config.DEVICE.type == "cuda": s_t_board_features = s_t_board_features.cuda()
+    if config.DEVICE.type == "cuda": s_t_board_features = s_t_board_features.cuda()
 
     current_total_steps = 0
     games_played_count = 0
@@ -84,7 +86,7 @@ def train(opt: argparse.Namespace):
         current_total_steps += 1
 
         s_prime_actual_features = env.get_state_properties(env.board)
-        if tetris_config.DEVICE.type == "cuda": s_prime_actual_features = s_prime_actual_features.cuda()
+        if config.DEVICE.type == "cuda": s_prime_actual_features = s_prime_actual_features.cuda()
 
         if agent_type == "ppo":
             ppo_controller.learn(
@@ -162,7 +164,7 @@ def train(opt: argparse.Namespace):
             
             current_game_score = 0
             s_t_board_features = env.reset()
-            if tetris_config.DEVICE.type == "cuda": s_t_board_features = s_t_board_features.cuda()
+            if config.DEVICE.type == "cuda": s_t_board_features = s_t_board_features.cuda()
 
     print("\nTraining finished.")
     if highest_score_this_session > -1: print(f"Highest score achieved in this training session: {highest_score_this_session}")
@@ -172,7 +174,7 @@ def train(opt: argparse.Namespace):
 
 if __name__ == "__main__":
     opt = get_args()
-    tetris_config.ensure_model_dir_exists()
+    config.ensure_model_dir_exists()
     setup_seeds()
     
     train(opt)

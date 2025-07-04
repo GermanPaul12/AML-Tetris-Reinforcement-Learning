@@ -4,16 +4,15 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 import numpy as np
-
 from typing import Tuple
 from collections import deque, namedtuple
 
+import config
 from helper import *
 from src.tetris import Tetris 
-import config as global_config
 from .base_agent import BaseAgent, PolicyNetwork
 
-DEVICE = global_config.DEVICE
+DEVICE = config.DEVICE
 
 Experience = namedtuple("Experience", field_names=["s_t_features", "s_prime_chosen_features", "reward", "done"])
 
@@ -76,15 +75,15 @@ class DQNAgent(BaseAgent):
         """
         super().__init__(state_size)
 
-        self.v_network = PolicyNetwork(state_size, seed=seed, fc1_units=global_config.DQN_FC1_UNITS, fc2_units=global_config.DQN_FC2_UNITS).to(DEVICE)
-        self.optimizer = optim.Adam(self.v_network.parameters(), lr=global_config.DQN_LR)
+        self.v_network = PolicyNetwork(state_size, seed=seed, fc1_units=config.DQN_FC1_UNITS, fc2_units=config.DQN_FC2_UNITS).to(DEVICE)
+        self.optimizer = optim.Adam(self.v_network.parameters(), lr=config.DQN_LR)
         self.criterion = nn.MSELoss()
-        self.memory = ReplayBuffer(global_config.DQN_BUFFER_SIZE, global_config.DQN_BATCH_SIZE)
+        self.memory = ReplayBuffer(config.DQN_BUFFER_SIZE, config.DQN_BATCH_SIZE)
         
         self.learning_steps_done = 0
         self.total_pieces_placed_overall = 0
 
-        self.epsilon = global_config.DQN_EPSILON_START
+        self.epsilon = config.DQN_EPSILON_START
         self.last_loss = None 
 
         print("DQN Agent (V-Learning Style for Original Loop by train.py) initialized.")
@@ -175,9 +174,9 @@ class DQNAgent(BaseAgent):
     def save(self, filename:str=None) -> None:
         """ Saves the current state of the DQN agent.
         Args:
-            filename (str, optional): The path to save the model. If None, uses the default path from global_config.
+            filename (str, optional): The path to save the model. If None, uses the default path from config.
         """
-        path = filename or global_config.DQN_MODEL_PATH 
+        path = filename or config.DQN_MODEL_PATH 
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save({
             'v_network_state_dict': self.v_network.state_dict(),
@@ -191,16 +190,16 @@ class DQNAgent(BaseAgent):
     def load(self, filename:str=None) -> None:
         """ Loads the DQN agent's model from a file.
         Args:
-            filename (str, optional): The path to load the model from. If None, uses the default path from global_config.
+            filename (str, optional): The path to load the model from. If None, uses the default path from config.
         """
-        path = filename or global_config.DQN_MODEL_PATH
+        path = filename or config.DQN_MODEL_PATH
         if os.path.exists(path):
             checkpoint = torch.load(path, map_location=DEVICE)
             self.v_network.load_state_dict(checkpoint['v_network_state_dict'])
             if 'optimizer_state_dict' in checkpoint: self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.learning_steps_done = checkpoint.get('learning_steps_done', 0)
             self.total_pieces_placed_overall = checkpoint.get('total_pieces_placed_overall', 0)
-            self.epsilon = checkpoint.get('epsilon_agent_internal', global_config.DQN_EPSILON_START)
+            self.epsilon = checkpoint.get('epsilon_agent_internal', config.DQN_EPSILON_START)
             self.v_network.train()
             print(f"DQN Agent (V-Learning, train.py controlled epsilon) loaded from {path}. "
                   f"Loaded learning steps: {self.learning_steps_done}, Agent internal epsilon: {self.epsilon:.4f}")

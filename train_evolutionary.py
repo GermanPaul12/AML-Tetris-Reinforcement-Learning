@@ -1,6 +1,6 @@
 import os
 import argparse
-import config as tetris_config
+import config
 
 from agents import GeneticAlgorithmController, ESAgent
 from helper import *
@@ -32,17 +32,17 @@ def train_evolutionary_agents(env_template: Tetris, opt: argparse.Namespace, mod
     
     if agent == "genetic":
         print("\n--- Training Genetic Algorithm (GA) ---")
-        ga_controller = GeneticAlgorithmController(state_size=tetris_config.STATE_SIZE)
+        ga_controller = GeneticAlgorithmController(state_size=config.STATE_SIZE)
 
-        num_generations = tetris_config.GA_N_GENERATIONS
+        num_generations = config.GA_N_GENERATIONS
         if opt.num_generations:
             num_generations = opt.num_generations
             print(f"Overriding number of GA generations to: {num_generations}")    
     elif agent == "es":
         print("\n--- Training Evolutionary Strategies (ES) ---")
-        es_controller = ESAgent(state_size=tetris_config.STATE_SIZE)
+        es_controller = ESAgent(state_size=config.STATE_SIZE)
 
-        num_generations = tetris_config.ES_N_GENERATIONS
+        num_generations = config.ES_N_GENERATIONS
         if opt.num_generations:
             num_generations = opt.num_generations
             print(f"Overriding number of ES generations to: {num_generations}")
@@ -86,24 +86,20 @@ def train_evolutionary_agents(env_template: Tetris, opt: argparse.Namespace, mod
             highest_overall_fitness_on_disk = current_overall_best_fitness
 
         # Save if tetris has been beaten
-        if current_overall_best_fitness >= tetris_config.SCORE_TARGET:
-            print(f"\nTarget Score ({tetris_config.SCORE_TARGET}) reached!")
+        if current_overall_best_fitness >= config.SCORE_TARGET:
+            print(f"\nTarget Score ({config.SCORE_TARGET}) reached!")
             break
 
     print(f"Best ES fitness achieved this run: {current_overall_best_fitness}")
 
 if __name__ == "__main__":
     opt = get_args()
-    tetris_config.ensure_model_dir_exists()
+    config.ensure_model_dir_exists()
     setup_seeds()
 
-    current_model_base_dir = tetris_config.MODEL_DIR
+    current_model_base_dir = config.MODEL_DIR
     print(f"Evolutionary models will be saved to: {current_model_base_dir}")
 
-    env_template = Tetris(
-        width=tetris_config.GAME_WIDTH,
-        height=tetris_config.GAME_HEIGHT,
-        block_size=tetris_config.GAME_BLOCK_SIZE,
-    )
+    env_template = Tetris()
 
     train_evolutionary_agents(env_template, opt, current_model_base_dir)

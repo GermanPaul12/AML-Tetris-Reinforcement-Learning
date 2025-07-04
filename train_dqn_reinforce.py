@@ -1,11 +1,10 @@
 import os
 import argparse
-import config as tetris_config
 
-from agents import DQNAgent, REINFORCEAgent
-
+import config
 from helper import *
 from src.tetris import Tetris
+from agents import DQNAgent, REINFORCEAgent
 
 def get_args() -> argparse.Namespace:
     """Parses command-line arguments for training configuration."""
@@ -26,23 +25,23 @@ def train(opt: argparse.Namespace):
     
     if agent == "dqn":
         print("\n--- Training DQN Agent ---")
-        dqn_controller = DQNAgent(state_size=tetris_config.STATE_SIZE)
+        dqn_controller = DQNAgent(state_size=config.STATE_SIZE)
         
-        total_learning_epochs = tetris_config.DQN_NUM_EPOCHS
-        initial_epsilon = tetris_config.DQN_EPSILON_START
-        final_epsilon = tetris_config.DQN_EPSILON_MIN
-        num_decay_learning_steps = tetris_config.DQN_EPSILON_DECAY_EPOCHS
+        total_learning_epochs = config.DQN_NUM_EPOCHS
+        initial_epsilon = config.DQN_EPSILON_START
+        final_epsilon = config.DQN_EPSILON_MIN
+        num_decay_learning_steps = config.DQN_EPSILON_DECAY_EPOCHS
         print(f"DQN Epsilon will decay from {initial_epsilon} to {final_epsilon} over learning epochs.")
     elif agent == "reinforce":
         print("\n--- Training REINFORCE Agent ---")
-        reinforce_controller = REINFORCEAgent(state_size=tetris_config.STATE_SIZE)
+        reinforce_controller = REINFORCEAgent(state_size=config.STATE_SIZE)
         
-        total_learning_epochs = tetris_config.REINFORCE_TRAIN_GAMES
+        total_learning_epochs = config.REINFORCE_TRAIN_GAMES
     else:
         raise ValueError(f"Unsupported agent type: {agent}. Choose 'dqn' or 'reinforce'.")
 
     if opt.num_epochs: total_learning_epochs = opt.num_epochs
-    current_model_base_dir = tetris_config.MODEL_DIR
+    current_model_base_dir = config.MODEL_DIR
     print(f"Starting training. Target learning epochs/episodes: {total_learning_epochs}.")
     print(f"Models will be saved to '{current_model_base_dir}'.")
 
@@ -56,7 +55,7 @@ def train(opt: argparse.Namespace):
     
     env = Tetris()
     state = env.reset()
-    if tetris_config.DEVICE.type == "cuda": state = state.cuda()
+    if config.DEVICE.type == "cuda": state = state.cuda()
 
     # Training Loop
     while current_epoch < total_learning_epochs and not training_complete:
@@ -69,7 +68,7 @@ def train(opt: argparse.Namespace):
         
         reward, game_over = env.step(action_tuple, render=opt.render_game)
         new_state = env.get_state_properties(env.board)
-        if tetris_config.DEVICE.type == "cuda": new_state = new_state.cuda()
+        if config.DEVICE.type == "cuda": new_state = new_state.cuda()
         current_game_score += reward
         
         if agent == "dqn": dqn_controller.expand_memory(reward=reward, done=game_over, state_info=state_info)
@@ -86,10 +85,10 @@ def train(opt: argparse.Namespace):
             loss_str = "Loss: N/A"
             
             if agent == "dqn":
-                if len(dqn_controller.memory) >= tetris_config.DQN_BATCH_SIZE and len(dqn_controller.memory) >= (tetris_config.DQN_BUFFER_SIZE / 10):
+                if len(dqn_controller.memory) >= config.DQN_BATCH_SIZE and len(dqn_controller.memory) >= (config.DQN_BUFFER_SIZE / 10):
                     experiences = dqn_controller.memory.sample()
                     if experiences[0].size(0) >= dqn_controller.memory.batch_size:
-                        dqn_controller.learn_from_ReplayBuffer(experiences, tetris_config.DQN_GAMMA)
+                        dqn_controller.learn_from_ReplayBuffer(experiences, config.DQN_GAMMA)
                         dqn_controller.learning_steps_done += 1
                         learned_this_epoch = True
                         loss_str = f"Loss: {float(dqn_controller.last_loss):.4f}"
@@ -126,8 +125,8 @@ def train(opt: argparse.Namespace):
                 else:
                     print(f"Session best {current_game_score}, but disk best {agent} score is {disk_best_score}. Not overwriting disk.")
 
-            if current_game_score >= tetris_config.EARLY_STOPPING_TARGET_SCORE:
-                print(f"\nEarly stopping: Target score {tetris_config.EARLY_STOPPING_TARGET_SCORE} reached.")
+            if current_game_score >= config.SCORE_TARGET:
+                print(f"\nEarly stopping: Target score {config.SCORE_TARGET} reached.")
                 training_complete = True
 
             if agent == "dqn": dqn_controller.reset()
@@ -135,7 +134,7 @@ def train(opt: argparse.Namespace):
             
             current_game_score = 0
             state = env.reset()
-            if tetris_config.DEVICE.type == "cuda": state = state.cuda()
+            if config.DEVICE.type == "cuda": state = state.cuda()
         else:
             state = new_state
 
@@ -147,7 +146,7 @@ def train(opt: argparse.Namespace):
 
 if __name__ == "__main__":
     opt = get_args()
-    tetris_config.ensure_model_dir_exists()
+    config.ensure_model_dir_exists()
     setup_seeds()
     
     train(opt)

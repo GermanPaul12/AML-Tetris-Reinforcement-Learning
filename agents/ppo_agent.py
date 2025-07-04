@@ -1,17 +1,17 @@
 import os
 import numpy as np
-
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
-
 from typing import Tuple
+
+import config
 from src.tetris import Tetris
 from .base_agent import BaseAgent, PolicyNetwork
-import config as global_config
 
-DEVICE = global_config.DEVICE
+
+DEVICE = config.DEVICE
 
 class PPOAgent(BaseAgent):
     """ Proximal Policy Optimization (PPO) Agent for Tetris"""
@@ -25,20 +25,20 @@ class PPOAgent(BaseAgent):
         super().__init__(state_size)
         
         # Hyperparameters from config
-        self.gamma = global_config.PPO_GAMMA
-        self.gae_lambda = global_config.PPO_GAE_LAMBDA
-        self.ppo_epochs = global_config.PPO_EPOCHS_PER_UPDATE
-        self.ppo_clip = global_config.PPO_CLIP_EPSILON
-        self.entropy_coeff = global_config.PPO_ENTROPY_COEFF
-        self.value_loss_coeff = global_config.PPO_VALUE_LOSS_COEFF
-        self.batch_size = global_config.PPO_BATCH_SIZE
-        self.update_horizon = global_config.PPO_UPDATE_HORIZON
+        self.gamma = config.PPO_GAMMA
+        self.gae_lambda = config.PPO_GAE_LAMBDA
+        self.ppo_epochs = config.PPO_EPOCHS_PER_UPDATE
+        self.ppo_clip = config.PPO_CLIP_EPSILON
+        self.entropy_coeff = config.PPO_ENTROPY_COEFF
+        self.value_loss_coeff = config.PPO_VALUE_LOSS_COEFF
+        self.batch_size = config.PPO_BATCH_SIZE
+        self.update_horizon = config.PPO_UPDATE_HORIZON
 
         # Actor and Critic networks
         self.actor = PolicyNetwork(state_size, seed=seed).to(DEVICE)
         self.critic = PolicyNetwork(state_size, seed=seed).to(DEVICE)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=global_config.PPO_ACTOR_LR)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=global_config.PPO_CRITIC_LR)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=config.PPO_ACTOR_LR)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=config.PPO_CRITIC_LR)
 
         # Buffer to store trajectory data
         self.memory = {
@@ -299,7 +299,7 @@ class PPOAgent(BaseAgent):
         Args:
             filepath (str, optional): Path to save the model. Defaults to config.PPO_MODEL_PATH.
         """
-        path = filepath or global_config.PPO_MODEL_PATH
+        path = filepath or config.PPO_MODEL_PATH
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save({"actor": self.actor.state_dict(), "critic": self.critic.state_dict()}, path)
         print(f"PPO Agent saved to {path}")
@@ -309,7 +309,7 @@ class PPOAgent(BaseAgent):
         Args:
             filepath (str, optional): Path to load the model from. Defaults to config.PPO_MODEL_PATH.
         """
-        path = filepath or global_config.PPO_MODEL_PATH
+        path = filepath or config.PPO_MODEL_PATH
         print(f"Loading PPO Agent from {path}...")
         if os.path.exists(path):
             checkpoint = torch.load(path, map_location=DEVICE)

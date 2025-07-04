@@ -1,28 +1,29 @@
 import os
 import copy
+import torch
 import random
 import numpy as np
 
-import torch
 from typing import Tuple
 
+import config
 from src.tetris import Tetris
 from .base_agent import BaseAgent, PolicyNetwork
-import config as global_config
 
-DEVICE = global_config.DEVICE
+
+DEVICE = config.DEVICE
 
 class GeneticAlgorithmController:
     """ Genetic Algorithm Controller for Tetris, managing the evolution of policy networks. """
     def __init__(self, state_size,
-        population_size=global_config.GA_POPULATION_SIZE,
-        mutation_rate=global_config.GA_MUTATION_RATE,
-        mutation_strength=global_config.GA_MUTATION_STRENGTH,
-        crossover_rate=global_config.GA_CROSSOVER_RATE,
-        tournament_size=global_config.GA_TOURNAMENT_SIZE,
-        elitism_count=global_config.GA_ELITISM_COUNT,
-        eval_games_per_individual=global_config.GA_EVAL_GAMES_PER_INDIVIDUAL,
-        max_pieces_per_eval_game=global_config.GA_MAX_PIECES_PER_GA_EVAL_GAME
+        population_size=config.GA_POPULATION_SIZE,
+        mutation_rate=config.GA_MUTATION_RATE,
+        mutation_strength=config.GA_MUTATION_STRENGTH,
+        crossover_rate=config.GA_CROSSOVER_RATE,
+        tournament_size=config.GA_TOURNAMENT_SIZE,
+        elitism_count=config.GA_ELITISM_COUNT,
+        eval_games_per_individual=config.GA_EVAL_GAMES_PER_INDIVIDUAL,
+        max_pieces_per_eval_game=config.GA_MAX_PIECES_PER_GA_EVAL_GAME
     ) -> None:
         """ Initializes the Genetic Algorithm Controller for Tetris.
         Args:
@@ -58,8 +59,8 @@ class GeneticAlgorithmController:
         """Initializes the population with random PolicyNetworks."""
         population = []
         for i in range(self.population_size):
-            individual_seed = global_config.SEED + i
-            policy_net = PolicyNetwork(self.state_size, self.action_size, seed=individual_seed, fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
+            individual_seed = config.SEED + i
+            policy_net = PolicyNetwork(self.state_size, self.action_size, seed=individual_seed, fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
             population.append(policy_net)
         return population
 
@@ -131,8 +132,8 @@ class GeneticAlgorithmController:
         Returns:
             Tuple[PolicyNetwork, PolicyNetwork]: Two child networks created from the parents.
         """
-        child1_net = PolicyNetwork(self.state_size, self.action_size, seed=random.randint(0, 1000000), fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
-        child2_net = PolicyNetwork(self.state_size, self.action_size, seed=random.randint(0, 1000000), fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
+        child1_net = PolicyNetwork(self.state_size, self.action_size, seed=random.randint(0, 1000000), fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
+        child2_net = PolicyNetwork(self.state_size, self.action_size, seed=random.randint(0, 1000000), fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
 
         p1_weights = parent1_net.get_weights_flat()
         p2_weights = parent2_net.get_weights_flat()
@@ -217,9 +218,9 @@ class GeneticAlgorithmController:
     def save_best_individual(self, filename:str=None) -> None:
         """Saves the best individual network to a file.
         Args:
-            filename (str, optional): Path to save the best individual network. Defaults to global_config.GA_MODEL_PATH.
+            filename (str, optional): Path to save the best individual network. Defaults to config.GA_MODEL_PATH.
         """
-        path = filename or global_config.GA_MODEL_PATH
+        path = filename or config.GA_MODEL_PATH
         if self.best_individual_network:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             torch.save(self.best_individual_network.state_dict(), path)
@@ -230,19 +231,19 @@ class GeneticAlgorithmController:
     def load_best_individual(self, filename:str=None, state_size_override:int=None) -> bool:
         """Loads the best individual network from a file.
         Args:
-            filename (str, optional): Path to load the best individual network from. Defaults to global_config.GA_MODEL_PATH.
+            filename (str, optional): Path to load the best individual network from. Defaults to config.GA_MODEL_PATH.
             state_size_override (int, optional): Override for the state size if needed. Defaults to None.
         Returns:
             bool: True if loading was successful, False otherwise.
         """
-        path = filename or global_config.GA_MODEL_PATH
+        path = filename or config.GA_MODEL_PATH
         _state_size = (state_size_override or self.state_size)
         if not _state_size:
             print("Error: Cannot load GA model without state_size.")
             return False
 
         if os.path.exists(path):
-            loaded_net = PolicyNetwork(_state_size, self.action_size, seed=0, fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
+            loaded_net = PolicyNetwork(_state_size, self.action_size, seed=0, fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
             loaded_net.load_state_dict(torch.load(path, map_location=DEVICE))
             loaded_net.eval()
             self.best_individual_network = loaded_net
@@ -260,7 +261,7 @@ class GeneticAgent(BaseAgent):
         self.policy_network = policy_network_instance
         if self.policy_network is None:
             print("GeneticAgent initialized without a policy network. Will use a default one (likely untrained).")
-            self.policy_network = PolicyNetwork(state_size, action_size=1, seed=seed, fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
+            self.policy_network = PolicyNetwork(state_size, action_size=1, seed=seed, fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
         self.policy_network.eval()
 
     def select_action(self, current_board_features:torch.Tensor, tetris_game_instance:Tetris, epsilon_override:float=None) -> Tuple[Tuple[int, int], dict]:
@@ -301,7 +302,7 @@ class GeneticAgent(BaseAgent):
         pass
     
     def save(self, filepath:str=None):
-        path = (filepath or global_config.GA_MODEL_PATH)
+        path = (filepath or config.GA_MODEL_PATH)
         if self.policy_network:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             torch.save(self.policy_network.state_dict(), path)
@@ -310,10 +311,10 @@ class GeneticAgent(BaseAgent):
             print("GeneticAgent has no policy network to save.")
 
     def load(self, filepath:str=None):
-        path = filepath or global_config.GA_MODEL_PATH
+        path = filepath or config.GA_MODEL_PATH
         if os.path.exists(path):
             if self.policy_network is None:
-                self.policy_network = PolicyNetwork(self.state_size, action_size=1, seed=0, fc1_units=global_config.GA_FC1_UNITS, fc2_units=global_config.GA_FC2_UNITS).to(DEVICE)
+                self.policy_network = PolicyNetwork(self.state_size, action_size=1, seed=0, fc1_units=config.GA_FC1_UNITS, fc2_units=config.GA_FC2_UNITS).to(DEVICE)
             self.policy_network.load_state_dict(torch.load(path, map_location=DEVICE))
             self.policy_network.eval()
             print(f"GeneticAgent policy loaded from: {path}")
