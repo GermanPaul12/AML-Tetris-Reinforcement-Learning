@@ -1,15 +1,5 @@
 # AML-Tetris-Reinforcement-Learning
 
-## Todo
-
-- Anpassung ReadME und Bericht, sodass A2C nicht mehr so schlecht dargestellt wird
-
-## Für die Präsentation
-
-- Tetris und dessen Observationspace erklären
-- Pro Modell erklären, wie trainiert wird, welche Eingabe, welcher Loss, etc.
-- Wissenschaftliche Artikel als Referenz?
-
 ## Project Overview
 
 This project implements and evaluates various Reinforcement Learning (RL) and Evolutionary Algorithm (EA) agents designed to play the classic game of Tetris. The primary goal is to explore different algorithmic approaches to solving this iconic game, comparing their learning efficiency, performance, and emergent strategies.
@@ -226,7 +216,7 @@ To get a visual sense of how our agents perform, we've recorded gameplay GIFs. T
   - ![REINFORCE Agent Gameplay](./models/gifs/reinforce_best_game_score_30689_reinforce.gif)
 - **A2C Agent Gameplay:**
 
-  - Unfortunately, the A2C agent's gameplay reflects its poor quantitative performance. The moves appear largely random, and it struggles to clear lines or achieve a meaningful score. We'll need to investigate this agent further.
+  - The improved A2C agent now demonstrates competent and strategic gameplay. It successfully clears lines and builds stacks with clear intent, achieving respectable scores. Its performance is much more in line with the PPO agent, showcasing a significant improvement in its learned policy and an ability to sustain longer games.
   - ![A2C Agent Gameplay](./models/gifs/a2c_best_game_score_17249_a2c.gif)
 - **PPO Agent Gameplay:**
 
@@ -260,27 +250,19 @@ We evaluated our agents over 20 games after their respective training routines. 
   - Our **Evolutionary Strategies (ES)** agent also performed extremely well, securing the second-highest average score and showing strong learning.
   - We're pleased to see our **Deep Q-Network (DQN)** has shown a massive improvement from our earlier evaluations. It's now achieving very high scores, comparable to ES. This strongly suggests that the fixes we implemented for model loading and ensuring proper evaluation mode for DQN were successful.
 - **Mid-Tier Performers (Showing Encouraging Learning):**
-  - **Proximal Policy Optimization (PPO)** and **REINFORCE** are now demonstrating significant learning, with average scores in the tens of thousands. They are substantially outperforming our random agent baseline, though they still have some way to go to catch up with GENETIC, ES, and DQN.
-- **Underperforming Agent:**
-  - Our **Advantage Actor-Critic (A2C)** agent is currently performing worse than the random agent. This points to some critical issues we need to address in its implementation or configuration.
+  - **Proximal Policy Optimization (PPO)**, **Advantage Actor-Critic (A2C)** and **REINFORCE** are now demonstrating significant learning, with average scores in the tens of thousands. They are substantially outperforming our random agent baseline, though they still have some way to go to catch up with GENETIC, ES, and DQN.
 - **Variability in Performance:** We observed that many of our successful agents (GENETIC, ES, DQN) show high standard deviations in their scores. This indicates a wide range of performance across the evaluation games, which isn't entirely unexpected for a complex game like Tetris.
 - **Impact of Model Loading & Evaluation Mode:**
-  - The dramatic improvement in DQN's performance strongly validates our efforts to ensure the correct, best-trained model is loaded and that the agent operates in the proper evaluation mode (e.g., greedy actions, networks in `eval()` state).
-  - For **A2C**, and potentially for **PPO** and **REINFORCE** (if their training scores were significantly higher than what we see in this evaluation), we need to meticulously apply the same rigorous model loading and evaluation mode procedures. The discrepancy for A2C, if it performed well during training, is now our most pressing concern among the RL agents.
+  - The dramatic improvement in both DQN's and A2C's performance after our review highlights the importance of applying rigorous model loading and evaluation mode procedures consistently across all agents. This was a key factor in achieving reliable and representative results.
 - **Effectiveness of Different Approaches:**
   - It seems direct policy search methods (GENETIC, ES) and value-based methods when properly evaluated (DQN) are proving very effective for us.
   - Our policy gradient methods (REINFORCE, PPO, A2C) are having mixed success, with A2C currently struggling. This could be due to their known sensitivity to hyperparameters, our choice of baseline, the current feature set, or the network architecture we've used.
 
 **Our Next Steps & Recommendations:**
 
-1. **Investigate A2C:** Our top priority is to figure out why A2C is underperforming. We'll need to thoroughly review its implementation, hyperparameter settings, model saving/loading logic, and how it handles evaluation mode.
-2. **Optimize PPO and REINFORCE:** While these are learning, we believe there's room for improvement. We plan to:
-   - Conduct further hyperparameter tuning.
-   - Double-check that we're consistently loading their best models from training for evaluation.
-   - Verify their evaluation mode is correctly set and enforced.
-3. **Analyze Our Top Performers:** We want to dig deeper into what makes GENETIC, ES, and DQN so successful in our current framework. This might involve looking at the characteristics of the policies they've learned or which features they seem to be leveraging most effectively.
-4. **Ensure Consistency in Evaluation:** We will continue to ensure all agents are evaluated under identical conditions and that our evaluation scripts robustly load the best available model for each agent, using our score-in-filename convention.
-5. **Feature Engineering & Network Architecture (Longer-Term):** For agents that aren't yet at the top tier, we might revisit our state representation (the current 4 heuristic features) and the complexity of our neural network architectures in the future. However, it's encouraging that GENETIC, ES, and DQN have demonstrated that high scores are achievable with the current setup.
+1. **Optimize Policy Gradient Agents**: While PPO, A2C, and REINFORCE are learning effectively, there's a clear performance gap to our top-tier agents. Our priority is to bridge this gap through further hyperparameter tuning (learning rates, entropy coefficients, GAE parameters) and potentially exploring more complex network architectures for these agents.
+2. **Ensure Consistency in Evaluation:** We will continue to ensure all agents are evaluated under identical conditions and that our evaluation scripts robustly load the best available model for each agent, using our score-in-filename convention.
+3. **Feature Engineering & Network Architecture (Longer-Term):** For agents that aren't yet at the top tier, we might revisit our state representation (the current 4 heuristic features) and the complexity of our neural network architectures in the future. However, it's encouraging that GENETIC, ES, and DQN have demonstrated that high scores are achievable with the current setup.
 
 ## Future Work and Potential Improvements
 
