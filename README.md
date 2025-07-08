@@ -1,10 +1,10 @@
-# AML-Tetris-Reinforcement-Learning
+# Aktuelle Data Science Entwicklungen II - Tetris Reinforcement Learning
 
 ## Project Overview
 
 This project implements and evaluates various Reinforcement Learning (RL) and Evolutionary Algorithm (EA) agents designed to play the classic game of Tetris. The primary goal is to explore different algorithmic approaches to solving this iconic game, comparing their learning efficiency, performance, and emergent strategies.
 
-This project was developed as part of the **Artificial Machine Learning (AML) course at DHBW Mannheim**.
+This project was developed as part of the **Aktuelle Data Science Entwicklungen II - Reinforcement Learning** **course at DHBW Mannheim**.
 
 ## Contributors
 
@@ -294,7 +294,7 @@ We evaluated our agents over 20 games after their respective training routines. 
 
 ### Course Materials
 
-- Lectures, provided code examples, and guidance from the Advanced Machine Learning (AML) course at DHBW Mannheim, instructed by Prof. Dr. Maximilian Scherer.
+- Lectures, provided code examples, and guidance from the Aktuelle Data Science Entwicklungen II - Reinforcement Learning course at DHBW Mannheim, instructed by Janina Patzer.
 
 ### Core Libraries & Documentation
 
